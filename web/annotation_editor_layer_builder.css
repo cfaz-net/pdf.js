@@ -39,11 +39,11 @@
       var(--outline-around-width)
   );
   --editorFreeText-editing-cursor: text;
-  --editorInk-editing-cursor: url(images/cursor-editorInk.svg) 0 16, pointer;
-  --editorHighlight-editing-cursor: url(images/cursor-editorTextHighlight.svg)
+  --editorInk-editing-cursor: url(pdf_viewer/web/images/cursor-editorInk.svg) 0 16, pointer;
+  --editorHighlight-editing-cursor: url(pdf_viewer/web/images/cursor-editorTextHighlight.svg)
       24 24,
     text;
-  --editorFreeHighlight-editing-cursor: url(images/cursor-editorFreeHighlight.svg)
+  --editorFreeHighlight-editing-cursor: url(pdf_viewer/web/images/cursor-editorFreeHighlight.svg)
       1 18,
     pointer;
 }
@@ -78,7 +78,8 @@
 
 @media (min-resolution: 1.1dppx) {
   :root {
-    --editorFreeText-editing-cursor: url(images/cursor-editorFreeText.svg) 0 16,
+    /*#if !COMPONENTS*/
+    --editorFreeText-editing-cursor: url(pdf_viewer/web/images/cursor-editorFreeText.svg) 0 16,
       text;
   }
 }
