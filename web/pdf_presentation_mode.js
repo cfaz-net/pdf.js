@@ -13,6 +13,9 @@
  * limitations under the License.
  */
 
+/** @typedef {import("./event_utils.js").EventBus} EventBus */
+/** @typedef {import("./pdf_viewer.js").PDFViewer} PDFViewer */
+
 import {
   normalizeWheelEventDelta,
   PresentationModeState,
@@ -101,7 +104,7 @@ class PDFPresentationMode {
       await promise;
       pdfViewer.focus(); // Fixes bug 1787456.
       return true;
-    } catch (reason) {
+    } catch {
       this.#removeFullscreenChangeListeners();
       this.#notifyStateChange(PresentationModeState.NORMAL);
     }
@@ -175,7 +178,9 @@ class PDFPresentationMode {
       this.pdfViewer.currentScaleValue = "page-fit";
 
       if (this.#args.annotationEditorMode !== null) {
-        this.pdfViewer.annotationEditorMode = AnnotationEditorType.NONE;
+        this.pdfViewer.annotationEditorMode = {
+          mode: AnnotationEditorType.NONE,
+        };
       }
     }, 0);
 
@@ -186,7 +191,7 @@ class PDFPresentationMode {
     // Text selection is disabled in Presentation Mode, thus it's not possible
     // for the user to deselect text that is selected (e.g. with "Select all")
     // when entering Presentation Mode, hence we remove any active selection.
-    window.getSelection().removeAllRanges();
+    document.getSelection().empty();
   }
 
   #exit() {
@@ -207,7 +212,9 @@ class PDFPresentationMode {
       this.pdfViewer.currentPageNumber = pageNumber;
 
       if (this.#args.annotationEditorMode !== null) {
-        this.pdfViewer.annotationEditorMode = this.#args.annotationEditorMode;
+        this.pdfViewer.annotationEditorMode = {
+          mode: this.#args.annotationEditorMode,
+        };
       }
       this.#args = null;
     }, 0);

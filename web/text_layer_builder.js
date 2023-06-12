@@ -28,8 +28,7 @@ import { removeNullCharacters } from "./ui_utils.js";
  * @property {TextHighlighter} highlighter - Optional object that will handle
  *   highlighting text from the find controller.
  * @property {TextAccessibilityManager} [accessibilityManager]
- * @property {boolean} [isOffscreenCanvasSupported] - Allows to use an
- *   OffscreenCanvas if needed.
+ * @property {function} [onAppend]
  */
 
 /**
@@ -40,6 +39,8 @@ import { removeNullCharacters } from "./ui_utils.js";
 class TextLayerBuilder {
   #enablePermissions = false;
 
+  #onAppend = null;
+
   #rotation = 0;
 
   #scale = 0;
@@ -49,8 +50,8 @@ class TextLayerBuilder {
   constructor({
     highlighter = null,
     accessibilityManager = null,
-    isOffscreenCanvasSupported = true,
     enablePermissions = false,
+    onAppend = null,
   }) {
     this.textContentItemsStr = [];
     this.renderingDone = false;
@@ -59,12 +60,12 @@ class TextLayerBuilder {
     this.textLayerRenderTask = null;
     this.highlighter = highlighter;
     this.accessibilityManager = accessibilityManager;
-    this.isOffscreenCanvasSupported = isOffscreenCanvasSupported;
     this.#enablePermissions = enablePermissions === true;
+    this.#onAppend = onAppend;
 
     this.div = document.createElement("div");
+    this.div.tabIndex = 0;
     this.div.className = "textLayer";
-    this.hide();
   }
 
   #finishRendering() {
@@ -102,7 +103,6 @@ class TextLayerBuilder {
           viewport,
           textDivs: this.textDivs,
           textDivProperties: this.textDivProperties,
-          isOffscreenCanvasSupported: this.isOffscreenCanvasSupported,
           mustRescale,
           mustRotate,
         });
@@ -124,19 +124,21 @@ class TextLayerBuilder {
       textDivs: this.textDivs,
       textDivProperties: this.textDivProperties,
       textContentItemsStr: this.textContentItemsStr,
-      isOffscreenCanvasSupported: this.isOffscreenCanvasSupported,
     });
 
     await this.textLayerRenderTask.promise;
     this.#finishRendering();
     this.#scale = scale;
     this.#rotation = rotation;
-    this.show();
+    // Ensure that the textLayer is appended to the DOM *before* handling
+    // e.g. a pending search operation.
+    this.#onAppend?.(this.div);
+    this.highlighter?.enable();
     this.accessibilityManager?.enable();
   }
 
   hide() {
-    if (!this.div.hidden) {
+    if (!this.div.hidden && this.renderingDone) {
       // We turn off the highlighter in order to avoid to scroll into view an
       // element of the text layer which could be hidden.
       this.highlighter?.disable();

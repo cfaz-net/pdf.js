@@ -309,6 +309,9 @@ const getSymbolsFonts = getLookupTableFactory(function (t) {
   t.Dingbats = true;
   t.Symbol = true;
   t.ZapfDingbats = true;
+  t.Wingdings = true;
+  t["Wingdings-Bold"] = true;
+  t["Wingdings-Regular"] = true;
 });
 
 // Glyph map for well-known standard fonts. Sometimes Ghostscript uses CID
@@ -752,13 +755,13 @@ const getGlyphMapForStandardFonts = getLookupTableFactory(function (t) {
 // The glyph map for ArialBlack differs slightly from the glyph map used for
 // other well-known standard fonts. Hence we use this (incomplete) CID to GID
 // mapping to adjust the glyph map for non-embedded ArialBlack fonts.
-const getSupplementalGlyphMapForArialBlack = getLookupTableFactory(function (
-  t
-) {
-  t[227] = 322;
-  t[264] = 261;
-  t[291] = 346;
-});
+const getSupplementalGlyphMapForArialBlack = getLookupTableFactory(
+  function (t) {
+    t[227] = 322;
+    t[264] = 261;
+    t[291] = 346;
+  }
+);
 
 // The glyph map for Calibri (a Windows font) differs from the glyph map used
 // in the standard fonts. Hence we use this (incomplete) CID to GID mapping to
@@ -888,6 +891,16 @@ function getStandardFontName(name) {
   return stdFontMap[fontName];
 }
 
+function isKnownFontName(name) {
+  const fontName = normalizeFontName(name);
+  return !!(
+    getStdFontMap()[fontName] ||
+    getNonStdFontMap()[fontName] ||
+    getSerifFonts()[fontName] ||
+    getSymbolsFonts()[fontName]
+  );
+}
+
 export {
   getFontNameToFileMap,
   getGlyphMapForStandardFonts,
@@ -898,4 +911,5 @@ export {
   getSupplementalGlyphMapForArialBlack,
   getSupplementalGlyphMapForCalibri,
   getSymbolsFonts,
+  isKnownFontName,
 };

@@ -19,6 +19,7 @@ import {
   IDENTITY_MATRIX,
   ImageKind,
   info,
+  isNodeJS,
   OPS,
   shadow,
   TextRenderingMode,
@@ -37,7 +38,6 @@ import {
   TilingPattern,
 } from "./pattern_helper.js";
 import { convertBlackAndWhiteToRGBA } from "../shared/image_utils.js";
-import { isNodeJS } from "../shared/is_node.js";
 
 // <canvas> contexts store most of the state we need natively.
 // However, PDF needs a bit more state, which we store here.
@@ -517,27 +517,26 @@ class CanvasExtraState {
   updateRectMinMax(transform, rect) {
     const p1 = Util.applyTransform(rect, transform);
     const p2 = Util.applyTransform(rect.slice(2), transform);
-    this.minX = Math.min(this.minX, p1[0], p2[0]);
-    this.minY = Math.min(this.minY, p1[1], p2[1]);
-    this.maxX = Math.max(this.maxX, p1[0], p2[0]);
-    this.maxY = Math.max(this.maxY, p1[1], p2[1]);
+    const p3 = Util.applyTransform([rect[0], rect[3]], transform);
+    const p4 = Util.applyTransform([rect[2], rect[1]], transform);
+
+    this.minX = Math.min(this.minX, p1[0], p2[0], p3[0], p4[0]);
+    this.minY = Math.min(this.minY, p1[1], p2[1], p3[1], p4[1]);
+    this.maxX = Math.max(this.maxX, p1[0], p2[0], p3[0], p4[0]);
+    this.maxY = Math.max(this.maxY, p1[1], p2[1], p3[1], p4[1]);
   }
 
   updateScalingPathMinMax(transform, minMax) {
     Util.scaleMinMax(transform, minMax);
     this.minX = Math.min(this.minX, minMax[0]);
-    this.maxX = Math.max(this.maxX, minMax[1]);
-    this.minY = Math.min(this.minY, minMax[2]);
+    this.minY = Math.min(this.minY, minMax[1]);
+    this.maxX = Math.max(this.maxX, minMax[2]);
     this.maxY = Math.max(this.maxY, minMax[3]);
   }
 
   updateCurvePathMinMax(transform, x0, y0, x1, y1, x2, y2, x3, y3, minMax) {
-    const box = Util.bezierBoundingBox(x0, y0, x1, y1, x2, y2, x3, y3);
+    const box = Util.bezierBoundingBox(x0, y0, x1, y1, x2, y2, x3, y3, minMax);
     if (minMax) {
-      minMax[0] = Math.min(minMax[0], box[0], box[2]);
-      minMax[1] = Math.max(minMax[1], box[0], box[2]);
-      minMax[2] = Math.min(minMax[2], box[1], box[3]);
-      minMax[3] = Math.max(minMax[3], box[1], box[3]);
       return;
     }
     this.updateRectMinMax(transform, box);
@@ -790,7 +789,10 @@ function resetCtxToDefault(ctx) {
     (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) ||
     !isNodeJS
   ) {
-    ctx.filter = "none";
+    const { filter } = ctx;
+    if (filter !== "none" && filter !== "") {
+      ctx.filter = "none";
+    }
   }
 }
 
@@ -851,12 +853,8 @@ function genericComposeSMask(
   const g0 = hasBackdrop ? backdrop[1] : 0;
   const b0 = hasBackdrop ? backdrop[2] : 0;
 
-  let composeFn;
-  if (subtype === "Luminosity") {
-    composeFn = composeSMaskLuminosity;
-  } else {
-    composeFn = composeSMaskAlpha;
-  }
+  const composeFn =
+    subtype === "Luminosity" ? composeSMaskLuminosity : composeSMaskAlpha;
 
   // processing image in chunks to save memory
   const PIXELS_TO_PROCESS = 1048576;
@@ -1311,11 +1309,12 @@ class CanvasGraphics {
       0,
     ]);
     maskToCanvas = Util.transform(maskToCanvas, [1, 0, 0, 1, 0, -height]);
-    const cord1 = Util.applyTransform([0, 0], maskToCanvas);
-    const cord2 = Util.applyTransform([width, height], maskToCanvas);
-    const rect = Util.normalizeRect([cord1[0], cord1[1], cord2[0], cord2[1]]);
-    const drawnWidth = Math.round(rect[2] - rect[0]) || 1;
-    const drawnHeight = Math.round(rect[3] - rect[1]) || 1;
+    const [minX, minY, maxX, maxY] = Util.getAxialAlignedBoundingBox(
+      [0, 0, width, height],
+      maskToCanvas
+    );
+    const drawnWidth = Math.round(maxX - minX) || 1;
+    const drawnHeight = Math.round(maxY - minY) || 1;
     const fillCanvas = this.cachedCanvases.getCanvas(
       "fillCanvas",
       drawnWidth,
@@ -1327,8 +1326,8 @@ class CanvasGraphics {
     // If objToCanvas is [a,b,c,d,e,f] then:
     //   - offsetX = min(a, c) + e
     //   - offsetY = min(b, d) + f
-    const offsetX = Math.min(cord1[0], cord2[0]);
-    const offsetY = Math.min(cord1[1], cord2[1]);
+    const offsetX = minX;
+    const offsetY = minY;
     fillCtx.translate(-offsetX, -offsetY);
     fillCtx.transform(...maskToCanvas);
 
@@ -2254,12 +2253,9 @@ class CanvasGraphics {
         }
       }
 
-      let charWidth;
-      if (vertical) {
-        charWidth = width * widthAdvanceScale - spacing * fontDirection;
-      } else {
-        charWidth = width * widthAdvanceScale + spacing * fontDirection;
-      }
+      const charWidth = vertical
+        ? width * widthAdvanceScale - spacing * fontDirection
+        : width * widthAdvanceScale + spacing * fontDirection;
       x += charWidth;
 
       if (restoreNeeded) {
@@ -2359,8 +2355,8 @@ class CanvasGraphics {
       const color = IR[1];
       const baseTransform = this.baseTransform || getCurrentTransform(this.ctx);
       const canvasGraphicsFactory = {
-        createCanvasGraphics: ctx => {
-          return new CanvasGraphics(
+        createCanvasGraphics: ctx =>
+          new CanvasGraphics(
             ctx,
             this.commonObjs,
             this.objs,
@@ -2370,8 +2366,7 @@ class CanvasGraphics {
               optionalContentConfig: this.optionalContentConfig,
               markedContentStack: this.markedContentStack,
             }
-          );
-        },
+          ),
       };
       pattern = new TilingPattern(
         IR,
@@ -2439,19 +2434,11 @@ class CanvasGraphics {
 
     const inv = getCurrentTransformInverse(ctx);
     if (inv) {
-      const canvas = ctx.canvas;
-      const width = canvas.width;
-      const height = canvas.height;
-
-      const bl = Util.applyTransform([0, 0], inv);
-      const br = Util.applyTransform([0, height], inv);
-      const ul = Util.applyTransform([width, 0], inv);
-      const ur = Util.applyTransform([width, height], inv);
-
-      const x0 = Math.min(bl[0], br[0], ul[0], ur[0]);
-      const y0 = Math.min(bl[1], br[1], ul[1], ur[1]);
-      const x1 = Math.max(bl[0], br[0], ul[0], ur[0]);
-      const y1 = Math.max(bl[1], br[1], ul[1], ur[1]);
+      const { width, height } = ctx.canvas;
+      const [x0, y0, x1, y1] = Util.getAxialAlignedBoundingBox(
+        [0, 0, width, height],
+        inv
+      );
 
       this.ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
     } else {
@@ -2969,7 +2956,10 @@ class CanvasGraphics {
       // It must be applied to the image before rescaling else some artifacts
       // could appear.
       // The final restore will reset it to its value.
-      ctx.filter = "none";
+      const { filter } = ctx;
+      if (filter !== "none" && filter !== "") {
+        ctx.filter = "none";
+      }
     }
 
     // scale the image to the unit square
