@@ -69,6 +69,7 @@ import { PasswordPrompt } from "./password_prompt.js";
 import { PDFAttachmentViewer } from "web-pdf_attachment_viewer";
 import { PDFCursorTools } from "web-pdf_cursor_tools";
 import { PDFDocumentProperties } from "web-pdf_document_properties";
+import { PDFSaveCfazDialog } from "web-pdf_save_cfaz_dialog";
 import { PDFFindBar } from "web-pdf_find_bar";
 import { PDFFindController } from "./pdf_find_controller.js";
 import { PDFHistory } from "./pdf_history.js";
@@ -117,6 +118,8 @@ const PDFViewerApplication = {
   pdfPresentationMode: null,
   /** @type {PDFDocumentProperties} */
   pdfDocumentProperties: null,
+  /** @type {PDFSaveCfazDialog} */
+  pdfSaveCfazDialog: null,
   /** @type {PDFLinkService} */
   pdfLinkService: null,
   /** @type {PDFHistory} */
@@ -501,6 +504,14 @@ const PDFViewerApplication = {
         eventBus,
         l10n,
         /* fileNameLookup = */ () => this._docFilename
+      );
+    }
+
+    if (appConfig.saveCfazDialog) {
+      this.pdfSaveCfazDialog = new PDFSaveCfazDialog(
+        appConfig.saveCfazDialog,
+        this.overlayManager,
+        l10n
       );
     }
 
@@ -1092,30 +1103,35 @@ const PDFViewerApplication = {
     });
   },
 
-  async customButton(){
+  async saveCfaz(){
     if (this._saveInProgress) {
       return;
     }
     this._saveInProgress = true;
     await this.pdfScriptingManager.dispatchWillSave();
 
-    const url = this._downloadUrl,
-      filename = this._docFilename;
+    const archivePutUrl = document.getElementById('archive_put_url')?.value,
+          archiveId = document.getElementById('archive_id')?.value;
+
+    this.pdfSaveCfazDialog?.open();
     try {
       this._ensureDownloadComplete();
 
       const data = await this.pdfDocument.saveDocument();
       const blob = new Blob([data], { type: "application/pdf" });
 
-      await this._sendFileToStorage(document.getElementById('archive_put_url')?.value, blob)
-      await this._updateArchiveCfaz(document.getElementById('archive_id')?.value)      
-      alert('upaoad')
+      if(archivePutUrl && archiveId){
+        await this._sendFileToStorage(archivePutUrl, blob);
+        await this._updateArchiveCfaz(archiveId);
+      }
+
+      this.pdfSaveCfazDialog?.setMessageContent('Arquivo enviado com sucesso.');
     } catch (reason) {
-      // When the PDF document isn't ready, or the PDF file is still
-      // downloading, simply fallback to a "regular" download.
+      this.pdfSaveCfazDialog?.setMessageContent(`Error when saving the document: ${reason.message}`);
       console.error(`Error when saving the document: ${reason.message}`);
-      // await this.download();
     } finally {
+      this.pdfSaveCfazDialog?.setCloseButtonToggle(true)
+
       await this.pdfScriptingManager.dispatchDidSave();
       this._saveInProgress = false;
     }
@@ -1989,7 +2005,7 @@ const PDFViewerApplication = {
       eventBus._on("reporttelemetry", webViewerReportTelemetry);
     }
 
-    eventBus._on("customButton", webViewerCustomButton);
+    eventBus._on("saveCfaz", webViewerSaveCfaz);
   },
 
   bindWindowEvents() {
@@ -2191,7 +2207,7 @@ const PDFViewerApplication = {
       eventBus._off("openfile", webViewerOpenFile);
     }
 
-    eventBus._off("customButton", webViewerCustomButton);
+    eventBus._off("saveCfaz", webViewerSaveCfaz);
 
     _boundEvents.beforePrint = null;
     _boundEvents.afterPrint = null;
@@ -2528,7 +2544,7 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
 
   // eslint-disable-next-line no-var
   var webViewerOpenFile = function (evt) {
-    PDFViewerApplication._openFileInput?.click();
+    // PDFViewerApplication._openFileInput?.click();
   };
 }
 
@@ -3349,8 +3365,9 @@ function webViewerAnnotationEditorStatesChanged(data) {
 function webViewerReportTelemetry({ details }) {
   PDFViewerApplication.externalServices.reportTelemetry(details);
 }
-function webViewerCustomButton() {
-  PDFViewerApplication.customButton();
+
+function webViewerSaveCfaz() {
+  PDFViewerApplication.saveCfaz();
 }
 
 /* Abstract factory for the print service. */
