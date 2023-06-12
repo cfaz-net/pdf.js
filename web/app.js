@@ -2564,8 +2564,7 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
 
   // eslint-disable-next-line no-var
   var webViewerOpenFile = function (evt) {
-    // const fileInput = PDFViewerApplication.appConfig.openFileInput;
-    // fileInput.click();
+    // PDFViewerApplication._openFileInput?.click();
   };
 }
 
@@ -3351,8 +3350,9 @@ function webViewerAnnotationEditorStatesChanged(data) {
 function webViewerSaveCfaz() {
   PDFViewerApplication.saveCfaz();
 }
-function webViewerCustomButton() {
-  PDFViewerApplication.customButton();
+
+function webViewerSaveCfaz() {
+  PDFViewerApplication.saveCfaz();
 }
 
 /* Abstract factory for the print service. */

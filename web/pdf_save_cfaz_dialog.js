@@ -55,7 +55,7 @@ class PDFSaveCfazDialog {
 
   #reset() {
     this.closeButtonToggle = false;
-    this.messageContent = "Enviando arquivo…";
+    this.messageContent = "";
   }
 
   /**
