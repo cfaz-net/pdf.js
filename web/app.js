@@ -1090,7 +1090,6 @@ const PDFViewerApplication = {
           reject(new Error("Não foi possível atualizar o arquivo."));
         }
       };
-
       xhr.onerror = function (e) {
         reject(e);
       };

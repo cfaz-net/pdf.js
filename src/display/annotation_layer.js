@@ -247,6 +247,14 @@ class AnnotationElement {
     }
   }
 
+  static _hasPopupData({ titleObj, contentsObj, richText }) {
+    return !!(titleObj?.str || contentsObj?.str || richText?.str);
+  }
+
+  get hasPopupData() {
+    return AnnotationElement._hasPopupData(this.data);
+  }
+
   /**
    * Create an empty container for the annotation's HTML element.
    *
