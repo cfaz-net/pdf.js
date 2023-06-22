@@ -1077,7 +1077,6 @@ const PDFViewerApplication = {
       if(csrfToken){
         xhr.setRequestHeader('X-CSRF-Token', csrfToken);
       }
-
       xhr.onload = function () {
         if (xhr.status === 200) {
           resolve();
