@@ -1086,6 +1086,12 @@ const PDFViewerApplication = {
     return new Promise((resolve, reject) => {
       let xhr = new XMLHttpRequest();
       xhr.open('PUT', `/archives/${archive_id}.json`, true);
+
+      const csrfToken = document.head.querySelector("[name='csrf-token']")?.content;
+
+      if(csrfToken){
+        xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+      }
   
       xhr.onload = function () {
         if (xhr.status === 200) {
