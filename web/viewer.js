@@ -69,7 +69,8 @@ function getViewerConfiguration() {
         "editorStampParamsToolbar"
       ),
       download: document.getElementById("download"),
-      saveCfaz: document.getElementById("saveCfaz")
+      saveCfaz: document.getElementById("saveCfaz"),
+      backButton: document.getElementById("backButton"),
     },
     secondaryToolbar: {
       toolbar: document.getElementById("secondaryToolbar"),

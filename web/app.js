@@ -1212,6 +1212,14 @@ const PDFViewerApplication = {
     }
   },
 
+  openInExternalApp() {
+    this.downloadOrSave({ openInExternalApp: true });
+  },
+
+  backButton() {
+    window.history.back();
+  },
+
   /**
    * Report the error; used for errors affecting loading and/or parsing of
    * the entire PDF document.
@@ -2012,6 +2020,7 @@ const PDFViewerApplication = {
     }
 
     eventBus._on("saveCfaz", webViewerSaveCfaz);
+    eventBus._on("backButton", webViewerBackButton);
   },
 
   bindWindowEvents() {
@@ -2214,6 +2223,7 @@ const PDFViewerApplication = {
     }
 
     eventBus._off("saveCfaz", webViewerSaveCfaz);
+    eventBus._off("backButton", webViewerBackButton);
 
     _boundEvents.beforePrint = null;
     _boundEvents.afterPrint = null;
@@ -3374,6 +3384,10 @@ function webViewerReportTelemetry({ details }) {
 
 function webViewerSaveCfaz() {
   PDFViewerApplication.saveCfaz();
+}
+
+function webViewerBackButton() {
+  PDFViewerApplication.backButton();
 }
 
 /* Abstract factory for the print service. */
