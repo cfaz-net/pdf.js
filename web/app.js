@@ -3354,6 +3354,10 @@ function webViewerSaveCfaz() {
   PDFViewerApplication.saveCfaz();
 }
 
+function webViewerBackButton() {
+  PDFViewerApplication.backButton();
+}
+
 /* Abstract factory for the print service. */
 const PDFPrintServiceFactory = {
   instance: {
