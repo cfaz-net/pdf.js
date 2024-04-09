@@ -171,6 +171,33 @@ class AnnotationEditorLayer {
     this.div.style.pointerEvents = "auto";
     for (const editor of this.#editors.values()) {
       editor.enableEditing();
+      editor.show(true);
+      if (editor.annotationElementId) {
+        this.#uiManager.removeChangedExistingAnnotation(editor);
+        annotationElementIds.add(editor.annotationElementId);
+      }
+    }
+
+    if (!this.#annotationLayer) {
+      return;
+    }
+
+    const editables = this.#annotationLayer.getEditableAnnotations();
+    for (const editable of editables) {
+      // The element must be hidden whatever its state is.
+      editable.hide();
+      if (this.#uiManager.isDeletedAnnotationElement(editable.data.id)) {
+        continue;
+      }
+      if (annotationElementIds.has(editable.data.id)) {
+        continue;
+      }
+      const editor = this.deserialize(editable);
+      if (!editor) {
+        continue;
+      }
+      this.addOrRebuild(editor);
+      editor.enableEditing();
     }
   }
 
@@ -178,10 +205,52 @@ class AnnotationEditorLayer {
    * Disable editor creation.
    */
   disable() {
-    this.div.style.pointerEvents = "none";
+    this.#isDisabling = true;
+    this.div.tabIndex = -1;
+    this.togglePointerEvents(false);
+    const changedAnnotations = new Map();
+    const resetAnnotations = new Map();
     for (const editor of this.#editors.values()) {
       editor.disableEditing();
+      if (!editor.annotationElementId) {
+        continue;
+      }
+      if (editor.serialize() !== null) {
+        changedAnnotations.set(editor.annotationElementId, editor);
+        continue;
+      } else {
+        resetAnnotations.set(editor.annotationElementId, editor);
+      }
+      this.getEditableAnnotation(editor.annotationElementId)?.show();
+      editor.remove();
     }
+
+    if (this.#annotationLayer) {
+      // Show the annotations that were hidden in enable().
+      const editables = this.#annotationLayer.getEditableAnnotations();
+      for (const editable of editables) {
+        const { id } = editable.data;
+        if (this.#uiManager.isDeletedAnnotationElement(id)) {
+          continue;
+        }
+        let editor = resetAnnotations.get(id);
+        if (editor) {
+          editor.resetAnnotationElement(editable);
+          editor.show(false);
+          editable.show();
+          continue;
+        }
+
+        editor = changedAnnotations.get(id);
+        if (editor) {
+          this.#uiManager.addChangedExistingAnnotation(editor);
+          editor.renderAnnotationElement(editable);
+          editor.show(false);
+        }
+        editable.show();
+      }
+    }
+
     this.#cleanup();
     if (this.isEmpty) {
       this.div.hidden = true;
@@ -257,6 +326,12 @@ class AnnotationEditorLayer {
   #changeParent(editor) {
     if (editor.parent === this) {
       return;
+    }
+
+    if (editor.parent && editor.annotationElementId) {
+      this.#uiManager.addDeletedAnnotationElement(editor.annotationElementId);
+      AnnotationEditor.deleteAnnotationElement(editor);
+      editor.annotationElementId = null;
     }
 
     this.attach(editor);

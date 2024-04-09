@@ -17,6 +17,8 @@
 /** @typedef {import("./display_utils").PageViewport} PageViewport */
 /** @typedef {import("./interfaces").IDownloadManager} IDownloadManager */
 /** @typedef {import("../../web/interfaces").IPDFLinkService} IPDFLinkService */
+// eslint-disable-next-line max-len
+/** @typedef {import("../src/display/editor/tools.js").AnnotationEditorUIManager} AnnotationEditorUIManager */
 
 import {
   AnnotationBorderStyleType,
@@ -154,6 +156,10 @@ class AnnotationElementFactory {
 }
 
 class AnnotationElement {
+  #updates = null;
+
+  #hasBorder = false;
+
   constructor(
     parameters,
     {
@@ -185,6 +191,60 @@ class AnnotationElement {
     }
   }
 
+  static _hasPopupData({ titleObj, contentsObj, richText }) {
+    return !!(titleObj?.str || contentsObj?.str || richText?.str);
+  }
+
+  get hasPopupData() {
+    return AnnotationElement._hasPopupData(this.data);
+  }
+
+  updateEdited(params) {
+    if (!this.container) {
+      return;
+    }
+
+    this.#updates ||= {
+      rect: this.data.rect.slice(0),
+    };
+
+    const { rect } = params;
+
+    if (rect) {
+      this.#setRectEdited(rect);
+    }
+  }
+
+  resetEdited() {
+    if (!this.#updates) {
+      return;
+    }
+    this.#setRectEdited(this.#updates.rect);
+    this.#updates = null;
+  }
+
+  #setRectEdited(rect) {
+    const {
+      container: { style },
+      data: { rect: currentRect, rotation },
+      parent: {
+        viewport: {
+          rawDims: { pageWidth, pageHeight, pageX, pageY },
+        },
+      },
+    } = this;
+    currentRect?.splice(0, 4, ...rect);
+    const { width, height } = getRectDims(rect);
+    style.left = `${(100 * (rect[0] - pageX)) / pageWidth}%`;
+    style.top = `${(100 * (pageHeight - rect[3] + pageY)) / pageHeight}%`;
+    if (rotation === 0) {
+      style.width = `${(100 * width) / pageWidth}%`;
+      style.height = `${(100 * height) / pageHeight}%`;
+    } else {
+      this.setRotation(rotation);
+    }
+  }
+
   /**
    * Create an empty container for the annotation's HTML element.
    *
@@ -198,43 +258,60 @@ class AnnotationElement {
 
     const container = document.createElement("section");
     container.setAttribute("data-annotation-id", data.id);
+    if (!(this instanceof WidgetAnnotationElement)) {
+      container.tabIndex = DEFAULT_TAB_INDEX;
+    }
+    const { style } = container;
+
+    // The accessibility manager will move the annotation in the DOM in
+    // order to match the visual ordering.
+    // But if an annotation is above an other one, then we must draw it
+    // after the other one whatever the order is in the DOM, hence the
+    // use of the z-index.
+    style.zIndex = this.parent.zIndex++;
+
+    if (data.popupRef) {
+      container.setAttribute("aria-haspopup", "dialog");
+    }
+
+    if (data.alternativeText) {
+      container.title = data.alternativeText;
+    }
 
     if (data.noRotate) {
       container.classList.add("norotate");
     }
 
-    const { pageWidth, pageHeight, pageX, pageY } = viewport.rawDims;
+    if (!data.rect || this instanceof PopupAnnotationElement) {
+      const { rotation } = data;
+      if (!data.hasOwnCanvas && rotation !== 0) {
+        this.setRotation(rotation, container);
+      }
+      return container;
+    }
+
     const { width, height } = getRectDims(data.rect);
 
-    // Do *not* modify `data.rect`, since that will corrupt the annotation
-    // position on subsequent calls to `_createContainer` (see issue 6804).
-    const rect = Util.normalizeRect([
-      data.rect[0],
-      page.view[3] - data.rect[1] + page.view[1],
-      data.rect[2],
-      page.view[3] - data.rect[3] + page.view[1],
-    ]);
-
     if (!ignoreBorder && data.borderStyle.width > 0) {
-      container.style.borderWidth = `${data.borderStyle.width}px`;
+      style.borderWidth = `${data.borderStyle.width}px`;
 
       const horizontalRadius = data.borderStyle.horizontalCornerRadius;
       const verticalRadius = data.borderStyle.verticalCornerRadius;
       if (horizontalRadius > 0 || verticalRadius > 0) {
         const radius = `calc(${horizontalRadius}px * var(--scale-factor)) / calc(${verticalRadius}px * var(--scale-factor))`;
-        container.style.borderRadius = radius;
+        style.borderRadius = radius;
       } else if (this instanceof RadioButtonWidgetAnnotationElement) {
         const radius = `calc(${width}px * var(--scale-factor)) / calc(${height}px * var(--scale-factor))`;
-        container.style.borderRadius = radius;
+        style.borderRadius = radius;
       }
 
       switch (data.borderStyle.style) {
         case AnnotationBorderStyleType.SOLID:
-          container.style.borderStyle = "solid";
+          style.borderStyle = "solid";
           break;
 
         case AnnotationBorderStyleType.DASHED:
-          container.style.borderStyle = "dashed";
+          style.borderStyle = "dashed";
           break;
 
         case AnnotationBorderStyleType.BEVELED:
@@ -246,7 +323,7 @@ class AnnotationElement {
           break;
 
         case AnnotationBorderStyleType.UNDERLINE:
-          container.style.borderBottomStyle = "solid";
+          style.borderBottomStyle = "solid";
           break;
 
         default:
@@ -255,24 +332,35 @@ class AnnotationElement {
 
       const borderColor = data.borderColor || null;
       if (borderColor) {
-        container.style.borderColor = Util.makeHexColor(
+        this.#hasBorder = true;
+        style.borderColor = Util.makeHexColor(
           borderColor[0] | 0,
           borderColor[1] | 0,
           borderColor[2] | 0
         );
       } else {
         // Transparent (invisible) border, so do not draw it at all.
-        container.style.borderWidth = 0;
+        style.borderWidth = 0;
       }
     }
 
-    container.style.left = `${(100 * (rect[0] - pageX)) / pageWidth}%`;
-    container.style.top = `${(100 * (rect[1] - pageY)) / pageHeight}%`;
+    // Do *not* modify `data.rect`, since that will corrupt the annotation
+    // position on subsequent calls to `_createContainer` (see issue 6804).
+    const rect = Util.normalizeRect([
+      data.rect[0],
+      page.view[3] - data.rect[1] + page.view[1],
+      data.rect[2],
+      page.view[3] - data.rect[3] + page.view[1],
+    ]);
+    const { pageWidth, pageHeight, pageX, pageY } = viewport.rawDims;
+
+    style.left = `${(100 * (rect[0] - pageX)) / pageWidth}%`;
+    style.top = `${(100 * (rect[1] - pageY)) / pageHeight}%`;
 
     const { rotation } = data;
     if (data.hasOwnCanvas || rotation === 0) {
-      container.style.width = `${(100 * width) / pageWidth}%`;
-      container.style.height = `${(100 * height) / pageHeight}%`;
+      style.width = `${(100 * width) / pageWidth}%`;
+      style.height = `${(100 * height) / pageHeight}%`;
     } else {
       this.setRotation(rotation, container);
     }
@@ -2594,10 +2682,46 @@ class FileAttachmentAnnotationElement extends AnnotationElement {
  * @property {Object<string, Array<Object>> | null} [fieldObjects]
  * @property {Map<string, HTMLCanvasElement>} [annotationCanvasMap]
  * @property {TextAccessibilityManager} [accessibilityManager]
+ * @property {AnnotationEditorUIManager} [annotationEditorUIManager]
  */
 
 class AnnotationLayer {
-  static #appendElement(element, id, div, accessibilityManager) {
+  #accessibilityManager = null;
+
+  #annotationCanvasMap = null;
+
+  #editableAnnotations = new Map();
+
+  constructor({
+    div,
+    accessibilityManager,
+    annotationCanvasMap,
+    annotationEditorUIManager,
+    page,
+    viewport,
+  }) {
+    this.div = div;
+    this.#accessibilityManager = accessibilityManager;
+    this.#annotationCanvasMap = annotationCanvasMap;
+    this.page = page;
+    this.viewport = viewport;
+    this.zIndex = 0;
+    this._annotationEditorUIManager = annotationEditorUIManager;
+
+    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
+      // For testing purposes.
+      Object.defineProperty(this, "showPopups", {
+        value: async () => {
+          for (const show of this.popupShow) {
+            await show();
+          }
+        },
+      });
+      this.popupShow = [];
+    }
+  }
+
+  #appendElement(element, id) {
     const contentElement = element.firstChild || element;
     contentElement.id = `${AnnotationPrefix}${id}`;
 
@@ -2653,40 +2777,25 @@ class AnnotationLayer {
       if (!element.isRenderable) {
         continue;
       }
+
+      if (!isPopupAnnotation && data.popupRef) {
+        const elements = popupToElements.get(data.popupRef);
+        if (!elements) {
+          popupToElements.set(data.popupRef, [element]);
+        } else {
+          elements.push(element);
+        }
+      }
+
       const rendered = element.render();
       if (data.hidden) {
         rendered.style.visibility = "hidden";
       }
-      if (Array.isArray(rendered)) {
-        for (const renderedElement of rendered) {
-          renderedElement.style.zIndex = zIndex++;
-          AnnotationLayer.#appendElement(
-            renderedElement,
-            data.id,
-            div,
-            accessibilityManager
-          );
-        }
-      } else {
-        // The accessibility manager will move the annotation in the DOM in
-        // order to match the visual ordering.
-        // But if an annotation is above an other one, then we must draw it
-        // after the other one whatever the order is in the DOM, hence the
-        // use of the z-index.
-        rendered.style.zIndex = zIndex++;
+      this.#appendElement(rendered, data.id);
 
-        if (element instanceof PopupAnnotationElement) {
-          // Popup annotation elements should not be on top of other
-          // annotation elements to prevent interfering with mouse events.
-          div.prepend(rendered);
-        } else {
-          AnnotationLayer.#appendElement(
-            rendered,
-            data.id,
-            div,
-            accessibilityManager
-          );
-        }
+      if (element.annotationEditorType > 0) {
+        this.#editableAnnotations.set(element.data.id, element);
+        this._annotationEditorUIManager?.renderAnnotationElement(element);
       }
     }
 
@@ -2717,13 +2826,16 @@ class AnnotationLayer {
         continue;
       }
 
+      canvas.className = "annotationContent";
       const { firstChild } = element;
       if (!firstChild) {
         element.append(canvas);
       } else if (firstChild.nodeName === "CANVAS") {
         firstChild.replaceWith(canvas);
-      } else {
+      } else if (!firstChild.classList.contains("annotationContent")) {
         firstChild.before(canvas);
+      } else {
+        firstChild.after(canvas);
       }
     }
     annotationCanvasMap.clear();

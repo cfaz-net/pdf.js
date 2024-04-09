@@ -318,11 +318,14 @@ class FreeTextEditor extends AnnotationEditor {
       // we just insert it in the DOM, get its bounding box and then remove it.
       const { currentLayer, div } = this;
       const savedDisplay = div.style.display;
+      const savedVisibility = div.classList.contains("hidden");
+      div.classList.remove("hidden");
       div.style.display = "hidden";
       currentLayer.div.append(this.div);
       rect = div.getBoundingClientRect();
       div.remove();
       div.style.display = savedDisplay;
+      div.classList.toggle("hidden", savedVisibility);
     }
 
     this.width = rect.width / parentWidth;
@@ -482,6 +485,40 @@ class FreeTextEditor extends AnnotationEditor {
 
   /** @inheritdoc */
   static deserialize(data, parent, uiManager) {
+    let initialData = null;
+    if (data instanceof FreeTextAnnotationElement) {
+      const {
+        data: {
+          defaultAppearanceData: { fontSize, fontColor },
+          rect,
+          rotation,
+          id,
+        },
+        textContent,
+        textPosition,
+        parent: {
+          page: { pageNumber },
+        },
+      } = data;
+      // textContent is supposed to be an array of strings containing each line
+      // of text. However, it can be null or empty.
+      if (!textContent || textContent.length === 0) {
+        // Empty annotation.
+        return null;
+      }
+      initialData = data = {
+        annotationType: AnnotationEditorType.FREETEXT,
+        color: Array.from(fontColor),
+        fontSize,
+        value: textContent.join("\n"),
+        position: textPosition,
+        pageIndex: pageNumber - 1,
+        rect: rect.slice(0),
+        rotation,
+        id,
+        deleted: false,
+      };
+    }
     const editor = super.deserialize(data, parent, uiManager);
 
     editor.#fontSize = data.fontSize;
@@ -515,6 +552,38 @@ class FreeTextEditor extends AnnotationEditor {
       rect,
       rotation: this.rotation,
     };
+  }
+
+  /** @inheritdoc */
+  renderAnnotationElement(annotation) {
+    const content = super.renderAnnotationElement(annotation);
+    if (this.deleted) {
+      return content;
+    }
+    const { style } = content;
+    style.fontSize = `calc(${this.#fontSize}px * var(--scale-factor))`;
+    style.color = this.#color;
+
+    content.replaceChildren();
+    for (const line of this.#content.split("\n")) {
+      const div = document.createElement("div");
+      div.append(
+        line ? document.createTextNode(line) : document.createElement("br")
+      );
+      content.append(div);
+    }
+
+    const padding = FreeTextEditor._internalPadding * this.parentScale;
+    annotation.updateEdited({
+      rect: this.getRect(padding, padding),
+    });
+
+    return content;
+  }
+
+  resetAnnotationElement(annotation) {
+    super.resetAnnotationElement(annotation);
+    annotation.resetEdited();
   }
 }
 
