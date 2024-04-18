@@ -170,6 +170,7 @@
     --doorhanger-separator-color: rgb(92 92 97);
     --dialog-button-bg-color: rgb(92 92 97);
     --dialog-button-hover-bg-color: rgb(115 115 115);
+    --loading-icon: url(pdf_viewer/web/images/loading-dark.svg);
   }
 }
 
@@ -861,11 +862,11 @@ body {
   left: 6px;
 }
 
-.toolbarButton.customButton {
+.toolbarButton.saveButton {
   width: auto;
 }
 
-.toolbarButton.customButton::before {
+.toolbarButton.saveButton::before {
   content: none;
 }
 
