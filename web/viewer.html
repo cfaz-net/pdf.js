@@ -90,6 +90,15 @@ See https://github.com/adobe-type-tools/cmap-resources
     </script>
     <script src="viewer.js" type="module"></script>
 <!--#endif-->
+    
+    <!-- No cfaz fazer o import dos scripts abaixo e apagar os acima -->
+    
+    <!-- <link rel="resource" type="application/l10n" href="<%= asset_path('pdf_viewer/web/locale/locale.properties') %>">
+    <link rel="stylesheet" href="<%= asset_path('pdf_viewer/web/viewer.css') %>">
+
+    <script src="<%= asset_path('pdf_viewer/build/pdf.js') %>"></script>
+    <script src="<%= asset_path('pdf_viewer/build/pdf.worker.js') %>"></script>
+    <script src="<%= asset_path('pdf_viewer/web/viewer.js') %>"></script> -->
   </head>
 
   <body tabindex="1">
@@ -395,7 +404,11 @@ See https://github.com/adobe-type-tools/cmap-resources
                   <div class="splitToolbarButtonSeparator"></div>
                   <button id="zoomIn" class="toolbarButton" title="Zoom In" tabindex="22" data-l10n-id="pdfjs-zoom-in-button">
                     <span data-l10n-id="pdfjs-zoom-in-button-label">Zoom In</span>
-                   </button>
+                  </button>
+                  <div class="splitToolbarButtonSeparator"></div>
+                  <button id="customButton" class="toolbarButton saveButton" title="Save" tabindex="23" data-l10n-id="save">
+                    Save
+                  </button>
                 </div>
                 <span id="scaleSelectContainer" class="dropdownToolbarButton">
                   <select id="scaleSelect" title="Zoom" tabindex="23" data-l10n-id="pdfjs-zoom-select">
@@ -571,5 +584,15 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
+
+<!--#if GENERIC-->
+    <input type="file" id="fileInput" class="hidden">
+<!--#endif-->
+
+    <!-- Esses inputs hidden abaixo devem ser descomentados quando forem ser utilizados no cfaz -->
+
+    <!-- <input type="hidden" id="archive_url" value="<%= @archive.download_url %>" class="hidden">
+    <input type="hidden" id="archive_put_url" value="<%= @archive.put_object_url(@archive.document.key, @archive.document.content_type) %>" class="hidden">
+    <input type="hidden" id="archive_id" value="<%= @archive.id %>" class="hidden"> -->
   </body>
 </html>

@@ -405,7 +405,7 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
   };
   defaultOptions.locale = {
     /** @type {string} */
-    value: navigator.language || "en-US",
+    value: navigator.language || "pt-BR",
     kind: OptionKind.VIEWER,
   };
 } else if (PDFJSDev.test("CHROME")) {

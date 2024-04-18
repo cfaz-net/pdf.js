@@ -74,11 +74,17 @@
   &.free span {
     cursor: var(--editorFreeHighlight-editing-cursor);
   }
+  /*#if COMPONENTS*/
+  --editorInk-editing-cursor: pointer;
+  /*#else*/
+  --editorInk-editing-cursor: url(pdf_viewer/web/images/cursor-editorInk.svg) 0 16, pointer;
+  /*#endif*/
 }
 
 @media (min-resolution: 1.1dppx) {
   :root {
-    --editorFreeText-editing-cursor: url(images/cursor-editorFreeText.svg) 0 16,
+    /*#if !COMPONENTS*/
+    --editorFreeText-editing-cursor: url(pdf_viewer/web/images/cursor-editorFreeText.svg) 0 16,
       text;
   }
 }
