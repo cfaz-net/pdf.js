@@ -1084,6 +1084,7 @@ const PDFViewerApplication = {
           reject(new Error("Não foi possível atualizar o arquivo."));
         }
       };
+
       xhr.onerror = function (e) {
         reject(e);
       };
@@ -3467,20 +3468,6 @@ const PDFPrintServiceFactory = {
 function webViewerSaveCfaz() {
   PDFViewerApplication.saveCfaz();
 }
-
-function webViewerBackButton() {
-  PDFViewerApplication.backButton();
-}
-
-/* Abstract factory for the print service. */
-const PDFPrintServiceFactory = {
-  instance: {
-    supportsPrinting: false,
-    createPrintService() {
-      throw new Error("Not implemented: createPrintService");
-    },
-  },
-};
 
 function webViewerBackButton() {
   PDFViewerApplication.backButton();
