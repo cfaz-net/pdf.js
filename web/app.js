@@ -2277,9 +2277,9 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
       // Removing of the following line will not guarantee that the viewer will
       // start accepting URLs from foreign origin -- CORS headers on the remote
       // server must be properly configured.
-      // if (fileOrigin !== viewerOrigin) {
-      //   throw new Error("file origin does not match viewer's");
-      // }
+      if (fileOrigin !== viewerOrigin) {
+        throw new Error("file origin does not match viewer's");
+      }
     } catch (ex) {
       PDFViewerApplication.l10n.get("loading_error").then(msg => {
         PDFViewerApplication._documentError(msg, { message: ex?.message });
@@ -2317,107 +2317,6 @@ function reportPageStatsPDFBug({ pageNumber }) {
     /* index = */ pageNumber - 1
   );
   globalThis.Stats.add(pageNumber, pageView?.pdfPage?.stats);
-}
-
-function webViewerInitialized() {
-  const { appConfig, eventBus, l10n } = PDFViewerApplication;
-  let file;
-  if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-    const achiveUrl = document.getElementById('archive_url')?.value;
-
-    file = achiveUrl ?? AppOptions.get("defaultUrl");
-
-    validateFileURL(file);
-  } else if (PDFJSDev.test("MOZCENTRAL")) {
-    file = window.location.href;
-  } else if (PDFJSDev.test("CHROME")) {
-    file = AppOptions.get("defaultUrl");
-  }
-
-  if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-    const fileInput = appConfig.openFileInput;
-    fileInput.value = null;
-
-    fileInput.addEventListener("change", function (evt) {
-      const { files } = evt.target;
-      if (!files || files.length === 0) {
-        return;
-      }
-      eventBus.dispatch("fileinputchange", {
-        source: this,
-        fileInput: evt.target,
-      });
-    });
-
-    // Enable dragging-and-dropping a new PDF file onto the viewerContainer.
-    appConfig.mainContainer.addEventListener("dragover", function (evt) {
-      evt.preventDefault();
-
-      evt.dataTransfer.dropEffect =
-        evt.dataTransfer.effectAllowed === "copy" ? "copy" : "move";
-    });
-    appConfig.mainContainer.addEventListener("drop", function (evt) {
-      evt.preventDefault();
-
-      const { files } = evt.dataTransfer;
-      if (!files || files.length === 0) {
-        return;
-      }
-      eventBus.dispatch("fileinputchange", {
-        source: this,
-        fileInput: evt.dataTransfer,
-      });
-    });
-  }
-
-  if (!PDFViewerApplication.supportsDocumentFonts) {
-    AppOptions.set("disableFontFace", true);
-    l10n.get("web_fonts_disabled").then(msg => {
-      console.warn(msg);
-    });
-  }
-
-  if (!PDFViewerApplication.supportsPrinting) {
-    appConfig.toolbar?.print?.classList.add("hidden");
-    appConfig.secondaryToolbar?.printButton.classList.add("hidden");
-  }
-
-  if (!PDFViewerApplication.supportsFullscreen) {
-    appConfig.secondaryToolbar?.presentationModeButton.classList.add("hidden");
-  }
-
-  if (PDFViewerApplication.supportsIntegratedFind) {
-    appConfig.toolbar?.viewFind?.classList.add("hidden");
-  }
-
-  appConfig.mainContainer.addEventListener(
-    "transitionend",
-    function (evt) {
-      if (evt.target === /* mainContainer */ this) {
-        eventBus.dispatch("resize", { source: this });
-      }
-    },
-    true
-  );
-
-  try {
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      if (file) {
-        PDFViewerApplication.open({ url: file });
-      } else {
-        PDFViewerApplication._hideViewBookmark();
-      }
-    } else if (PDFJSDev.test("MOZCENTRAL || CHROME")) {
-      PDFViewerApplication.setTitleUsingUrl(file, /* downloadUrl = */ file);
-      PDFViewerApplication.initPassiveLoading();
-    } else {
-      throw new Error("Not implemented: webViewerInitialized");
-    }
-  } catch (reason) {
-    l10n.get("loading_error").then(msg => {
-      PDFViewerApplication._documentError(msg, reason);
-    });
-  }
 }
 
 function webViewerPageRender({ pageNumber }) {

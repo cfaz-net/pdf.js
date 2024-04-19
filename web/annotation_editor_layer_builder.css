@@ -28,8 +28,7 @@
 
 @media (min-resolution: 1.1dppx) {
   :root {
-    /*#if !COMPONENTS*/
-    --editorFreeText-editing-cursor: url(pdf_viewer/web/images/cursor-editorFreeText.svg) 0 16,
+    --editorFreeText-editing-cursor: url(images/cursor-editorFreeText.svg) 0 16,
       text;
     /*#endif*/
   }

@@ -320,7 +320,7 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
   };
   defaultOptions.locale = {
     /** @type {string} */
-    value: navigator.language || "pt-BR",
+    value: navigator.language || "en-US",
     kind: OptionKind.VIEWER,
   };
   defaultOptions.sandboxBundleSrc = {
