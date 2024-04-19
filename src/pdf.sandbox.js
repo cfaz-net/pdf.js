@@ -107,7 +107,9 @@ class Sandbox {
   }
 
   dumpMemoryUse() {
-    this._module?.ccall("dumpMemoryUse", null, []);
+    if (this._module) {
+      this._module.ccall("dumpMemoryUse", null, []);
+    }
   }
 
   nukeSandbox() {
@@ -141,7 +143,9 @@ class Sandbox {
 }
 
 function QuickJSSandbox() {
-  return ModuleLoader().then(module => new Sandbox(window, module));
+  return ModuleLoader().then(module => {
+    return new Sandbox(window, module);
+  });
 }
 
 export { QuickJSSandbox };

@@ -45,6 +45,20 @@ class OverlayManager {
   /**
    * @param {HTMLDialogElement} dialog - The overlay's DOM element.
    * @returns {Promise} A promise that is resolved when the overlay has been
+   *                    unregistered.
+   */
+  async unregister(dialog) {
+    if (!this.#overlays.has(dialog)) {
+      throw new Error("The overlay does not exist.");
+    } else if (this.#active === dialog) {
+      throw new Error("The overlay cannot be removed while it is active.");
+    }
+    this.#overlays.delete(dialog);
+  }
+
+  /**
+   * @param {HTMLDialogElement} dialog - The overlay's DOM element.
+   * @returns {Promise} A promise that is resolved when the overlay has been
    *                    opened.
    */
   async open(dialog) {

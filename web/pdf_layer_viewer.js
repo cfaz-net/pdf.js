@@ -13,30 +13,26 @@
  * limitations under the License.
  */
 
-/** @typedef {import("./event_utils.js").EventBus} EventBus */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/optional_content_config.js").OptionalContentConfig} OptionalContentConfig */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/api.js").PDFDocumentProxy} PDFDocumentProxy */
-
 import { BaseTreeViewer } from "./base_tree_viewer.js";
 
 /**
  * @typedef {Object} PDFLayerViewerOptions
  * @property {HTMLDivElement} container - The viewer element.
  * @property {EventBus} eventBus - The application event bus.
+ * @property {IL10n} l10n - Localization service.
  */
 
 /**
  * @typedef {Object} PDFLayerViewerRenderParameters
  * @property {OptionalContentConfig|null} optionalContentConfig - An
  *   {OptionalContentConfig} instance.
- * @property {PDFDocumentProxy} pdfDocument - A {PDFDocument} instance.
+ * @property {PDFDocument} pdfDocument - A {PDFDocument} instance.
  */
 
 class PDFLayerViewer extends BaseTreeViewer {
   constructor(options) {
     super(options);
+    this.l10n = options.l10n;
 
     this.eventBus._on("optionalcontentconfigchanged", evt => {
       this.#updateLayers(evt.promise);
@@ -54,7 +50,7 @@ class PDFLayerViewer extends BaseTreeViewer {
   }
 
   /**
-   * @protected
+   * @private
    */
   _dispatchEvent(layersCount) {
     this.eventBus.dispatch("layersloaded", {
@@ -64,7 +60,7 @@ class PDFLayerViewer extends BaseTreeViewer {
   }
 
   /**
-   * @protected
+   * @private
    */
   _bindLink(element, { groupId, input }) {
     const setVisibility = () => {
@@ -98,12 +94,12 @@ class PDFLayerViewer extends BaseTreeViewer {
       element.textContent = this._normalizeTextContent(name);
       return;
     }
-    element.textContent = await this._l10n.get("pdfjs-additional-layers");
+    element.textContent = await this.l10n.get("additional_layers");
     element.style.fontStyle = "italic";
   }
 
   /**
-   * @protected
+   * @private
    */
   _addToggleButton(div, { name = null }) {
     super._addToggleButton(div, /* hidden = */ name === null);
@@ -188,7 +184,7 @@ class PDFLayerViewer extends BaseTreeViewer {
     }
     const pdfDocument = this._pdfDocument;
     const optionalContentConfig = await (promise ||
-      pdfDocument.getOptionalContentConfig({ intent: "display" }));
+      pdfDocument.getOptionalContentConfig());
 
     if (pdfDocument !== this._pdfDocument) {
       return; // The document was closed while the optional content resolved.

@@ -22,27 +22,19 @@
     "browser": true,
     "es2022": true,
     "worker": true,
+    "amd": true,
   },
 
   "globals": {
-    "PDFJSDev": "readonly",
-    "__non_webpack_import__": "readonly",
+    "PDFJSDev": false,
+    "exports": false,
   },
 
   "rules": {
     // Plugins
-    "import/export": "error",
-    "import/exports-last": "error",
     "import/extensions": ["error", "always", { "ignorePackages": true, }],
-    "import/first": "error",
-    "import/named": "error",
-    "import/no-cycle": "error",
-    "import/no-empty-named-blocks": "error",
-    "import/no-commonjs": "error",
-    "import/no-mutable-exports": "error",
-    "import/no-self-import": "error",
     "import/no-unresolved": ["error", {
-      "ignore": ["display", "pdfjs", "pdfjs-lib", "pdfjs-web", "web", "fluent-bundle", "fluent-dom"],
+      "ignore": ["pdfjs", "pdfjs-lib", "pdfjs-web", "web"]
     }],
     "mozilla/avoid-removeChild": "error",
     "mozilla/use-includes-instead-of-indexOf": "error",
@@ -65,20 +57,16 @@
     "unicorn/prefer-array-flat": "error",
     "unicorn/prefer-array-flat-map": "error",
     "unicorn/prefer-array-index-of": "error",
-    "unicorn/prefer-array-some": "error",
     "unicorn/prefer-at": "error",
     "unicorn/prefer-date-now": "error",
     "unicorn/prefer-dom-node-append": "error",
     "unicorn/prefer-dom-node-remove": "error",
     "unicorn/prefer-logical-operator-over-ternary": "error",
     "unicorn/prefer-modern-dom-apis": "error",
-    "unicorn/prefer-modern-math-apis": "error",
     "unicorn/prefer-negative-index": "error",
-    "unicorn/prefer-optional-catch-binding": "error",
     "unicorn/prefer-regexp-test": "error",
     "unicorn/prefer-string-replace-all": "error",
     "unicorn/prefer-string-starts-ends-with": "error",
-    "unicorn/prefer-ternary": ["error", "only-single-line"],
 
     // Possible errors
     "for-direction": "error",
@@ -140,12 +128,10 @@
     "no-implied-eval": "error",
     "no-iterator": "error",
     "no-lone-blocks": "error",
-    "no-lonely-if": "error",
     "no-multi-str": "error",
-    "no-new": "error",
     "no-new-func": "error",
-    "no-new-symbol": "error",
     "no-new-wrappers": "error",
+    "no-new": "error",
     "no-octal-escape": "error",
     "no-octal": "error",
     "no-redeclare": "error",
@@ -243,9 +229,9 @@
     }],
 
     // ECMAScript 6
-    "arrow-body-style": ["error", "as-needed"],
     "constructor-super": "error",
     "no-class-assign": "error",
+    "no-confusing-arrow": "error",
     "no-const-assign": "error",
     "no-dupe-class-members": "error",
     "no-duplicate-imports": "error",
@@ -258,7 +244,6 @@
       "avoidQuotes": true,
     }],
     "prefer-const": "error",
-    "require-yield": "error",
     "sort-imports": ["error", {
       "ignoreCase": true,
     }],

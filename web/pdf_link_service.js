@@ -16,7 +16,7 @@
 /** @typedef {import("./event_utils").EventBus} EventBus */
 /** @typedef {import("./interfaces").IPDFLinkService} IPDFLinkService */
 
-import { parseQueryString } from "./ui_utils.js";
+import { parseQueryString, removeNullCharacters } from "./ui_utils.js";
 
 const DEFAULT_LINK_REL = "noopener noreferrer nofollow";
 
@@ -49,12 +49,15 @@ function addLinkAttributes(link, { url, target, rel, enabled = true } = {}) {
     throw new Error('A valid "url" parameter must provided.');
   }
 
+  const urlNullRemoved = removeNullCharacters(url);
   if (enabled) {
-    link.href = link.title = url;
+    link.href = link.title = urlNullRemoved;
   } else {
     link.href = "";
-    link.title = `Disabled: ${url}`;
-    link.onclick = () => false;
+    link.title = `Disabled: ${urlNullRemoved}`;
+    link.onclick = () => {
+      return false;
+    };
   }
 
   let targetStr = ""; // LinkTarget.NONE
@@ -375,38 +378,40 @@ class PDFLinkService {
             zoomArgs.length > 2 ? zoomArgs[2] | 0 : null,
             zoomArgNumber ? zoomArgNumber / 100 : zoomArg,
           ];
-        } else if (zoomArg === "Fit" || zoomArg === "FitB") {
-          dest = [null, { name: zoomArg }];
-        } else if (
-          zoomArg === "FitH" ||
-          zoomArg === "FitBH" ||
-          zoomArg === "FitV" ||
-          zoomArg === "FitBV"
-        ) {
-          dest = [
-            null,
-            { name: zoomArg },
-            zoomArgs.length > 1 ? zoomArgs[1] | 0 : null,
-          ];
-        } else if (zoomArg === "FitR") {
-          if (zoomArgs.length !== 5) {
-            console.error(
-              'PDFLinkService.setHash: Not enough parameters for "FitR".'
-            );
-          } else {
+        } else {
+          if (zoomArg === "Fit" || zoomArg === "FitB") {
+            dest = [null, { name: zoomArg }];
+          } else if (
+            zoomArg === "FitH" ||
+            zoomArg === "FitBH" ||
+            zoomArg === "FitV" ||
+            zoomArg === "FitBV"
+          ) {
             dest = [
               null,
               { name: zoomArg },
-              zoomArgs[1] | 0,
-              zoomArgs[2] | 0,
-              zoomArgs[3] | 0,
-              zoomArgs[4] | 0,
+              zoomArgs.length > 1 ? zoomArgs[1] | 0 : null,
             ];
+          } else if (zoomArg === "FitR") {
+            if (zoomArgs.length !== 5) {
+              console.error(
+                'PDFLinkService.setHash: Not enough parameters for "FitR".'
+              );
+            } else {
+              dest = [
+                null,
+                { name: zoomArg },
+                zoomArgs[1] | 0,
+                zoomArgs[2] | 0,
+                zoomArgs[3] | 0,
+                zoomArgs[4] | 0,
+              ];
+            }
+          } else {
+            console.error(
+              `PDFLinkService.setHash: "${zoomArg}" is not a valid zoom value.`
+            );
           }
-        } else {
-          console.error(
-            `PDFLinkService.setHash: "${zoomArg}" is not a valid zoom value.`
-          );
         }
       }
       if (dest) {
@@ -429,41 +434,32 @@ class PDFLinkService {
       if (params.has("nameddest")) {
         this.goToDestination(params.get("nameddest"));
       }
+    } else {
+      // Named (or explicit) destination.
+      dest = unescape(hash);
+      try {
+        dest = JSON.parse(dest);
 
-      if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
+        if (!Array.isArray(dest)) {
+          // Avoid incorrectly rejecting a valid named destination, such as
+          // e.g. "4.3" or "true", because `JSON.parse` converted its type.
+          dest = dest.toString();
+        }
+      } catch (ex) {}
+
+      if (
+        typeof dest === "string" ||
+        PDFLinkService.#isValidExplicitDestination(dest)
+      ) {
+        this.goToDestination(dest);
         return;
       }
-      // Support opening of PDF attachments in the Firefox PDF Viewer,
-      // which uses a couple of non-standard hash parameters; refer to
-      // `DownloadManager.openOrDownloadData` in the firefoxcom.js file.
-      if (!params.has("filename") || !params.has("filedest")) {
-        return;
-      }
-      hash = params.get("filedest");
+      console.error(
+        `PDFLinkService.setHash: "${unescape(
+          hash
+        )}" is not a valid destination.`
+      );
     }
-
-    // Named (or explicit) destination.
-    dest = unescape(hash);
-    try {
-      dest = JSON.parse(dest);
-
-      if (!Array.isArray(dest)) {
-        // Avoid incorrectly rejecting a valid named destination, such as
-        // e.g. "4.3" or "true", because `JSON.parse` converted its type.
-        dest = dest.toString();
-      }
-    } catch {}
-
-    if (
-      typeof dest === "string" ||
-      PDFLinkService.#isValidExplicitDestination(dest)
-    ) {
-      this.goToDestination(dest);
-      return;
-    }
-    console.error(
-      `PDFLinkService.setHash: "${unescape(hash)}" is not a valid destination.`
-    );
   }
 
   /**
@@ -511,13 +507,37 @@ class PDFLinkService {
    */
   async executeSetOCGState(action) {
     const pdfDocument = this.pdfDocument;
-    const optionalContentConfig =
-      await this.pdfViewer.optionalContentConfigPromise;
+    const optionalContentConfig = await this.pdfViewer
+      .optionalContentConfigPromise;
 
     if (pdfDocument !== this.pdfDocument) {
       return; // The document was closed while the optional content resolved.
     }
-    optionalContentConfig.setOCGState(action);
+    let operator;
+
+    for (const elem of action.state) {
+      switch (elem) {
+        case "ON":
+        case "OFF":
+        case "Toggle":
+          operator = elem;
+          continue;
+      }
+      switch (operator) {
+        case "ON":
+          optionalContentConfig.setVisibility(elem, true);
+          break;
+        case "OFF":
+          optionalContentConfig.setVisibility(elem, false);
+          break;
+        case "Toggle":
+          const group = optionalContentConfig.getGroup(elem);
+          if (group) {
+            optionalContentConfig.setVisibility(elem, !group.visible);
+          }
+          break;
+      }
+    }
 
     this.pdfViewer.optionalContentConfigPromise = Promise.resolve(
       optionalContentConfig

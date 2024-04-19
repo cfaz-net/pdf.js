@@ -27,7 +27,8 @@ import {
   $pushGlyphs,
   $text,
   $toHTML,
-} from "./symbol_utils.js";
+  XmlObject,
+} from "./xfa_object.js";
 import { $buildXFAObject, NamespaceIds } from "./namespaces.js";
 import {
   fixTextIndent,
@@ -36,7 +37,6 @@ import {
   setFontFamily,
 } from "./html_utils.js";
 import { getMeasurement, HTMLResult, stripQuotes } from "./utils.js";
-import { XmlObject } from "./xfa_object.js";
 
 const XHTML_NS_ID = NamespaceIds.xhtml.id;
 const $richText = Symbol();
@@ -127,13 +127,18 @@ function mapStyle(styleStr, node, richText) {
     }
     let newValue = value;
     if (mapping) {
-      newValue =
-        typeof mapping === "string" ? mapping : mapping(value, original);
+      if (typeof mapping === "string") {
+        newValue = mapping;
+      } else {
+        newValue = mapping(value, original);
+      }
     }
     if (key.endsWith("scale")) {
-      style.transform = style.transform
-        ? `${style[key]} ${newValue}`
-        : newValue;
+      if (style.transform) {
+        style.transform = `${style[key]} ${newValue}`;
+      } else {
+        style.transform = newValue;
+      }
     } else {
       style[key.replaceAll(/-([a-zA-Z])/g, (_, x) => x.toUpperCase())] =
         newValue;

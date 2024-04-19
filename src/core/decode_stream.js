@@ -73,7 +73,7 @@ class DecodeStream extends BaseStream {
     return this.buffer[this.pos++];
   }
 
-  getBytes(length, ignoreColorSpace = false) {
+  getBytes(length) {
     const pos = this.pos;
     let end;
 
@@ -82,7 +82,7 @@ class DecodeStream extends BaseStream {
       end = pos + length;
 
       while (!this.eof && this.bufferLength < end) {
-        this.readBlock(ignoreColorSpace);
+        this.readBlock();
       }
       const bufEnd = this.bufferLength;
       if (end > bufEnd) {
@@ -90,7 +90,7 @@ class DecodeStream extends BaseStream {
       }
     } else {
       while (!this.eof) {
-        this.readBlock(ignoreColorSpace);
+        this.readBlock();
       }
       end = this.bufferLength;
     }

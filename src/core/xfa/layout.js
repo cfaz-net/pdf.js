@@ -20,7 +20,7 @@ import {
   $getTemplateRoot,
   $isSplittable,
   $isThereMoreWidth,
-} from "./symbol_utils.js";
+} from "./xfa_object.js";
 import { measureToString } from "./html_utils.js";
 
 // Subform and ExclGroup have a layout so they share these functions.

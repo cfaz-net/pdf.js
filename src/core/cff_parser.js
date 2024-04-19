@@ -558,7 +558,12 @@ class CFFParser {
         stackSize %= 2;
         validationCommand = CharstringValidationData[value];
       } else if (value === 10 || value === 29) {
-        const subrsIndex = value === 10 ? localSubrIndex : globalSubrIndex;
+        let subrsIndex;
+        if (value === 10) {
+          subrsIndex = localSubrIndex;
+        } else {
+          subrsIndex = globalSubrIndex;
+        }
         if (!subrsIndex) {
           validationCommand = CharstringValidationData[value];
           warn("Missing subrsIndex for " + validationCommand.id);
@@ -1385,12 +1390,11 @@ class CFFCompiler {
       data: [],
       length: 0,
       add(data) {
-        try {
-          // It's possible to exceed the call stack maximum size when trying
-          // to push too much elements.
-          // In case of failure, we fallback to the `concat` method.
+        if (data.length <= 65536) {
+          // The number of arguments is limited, hence we just take 65536 as
+          // limit because it isn't too high or too low.
           this.data.push(...data);
-        } catch {
+        } else {
           this.data = this.data.concat(data);
         }
         this.length = this.data.length;

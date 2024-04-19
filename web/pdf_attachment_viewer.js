@@ -13,12 +13,8 @@
  * limitations under the License.
  */
 
-/** @typedef {import("./event_utils.js").EventBus} EventBus */
-// eslint-disable-next-line max-len
-/** @typedef {import("./download_manager.js").DownloadManager} DownloadManager */
-
+import { getFilenameFromUrl, PromiseCapability } from "pdfjs-lib";
 import { BaseTreeViewer } from "./base_tree_viewer.js";
-import { getFilenameFromUrl } from "pdfjs-lib";
 import { waitOnEventOrTimeout } from "./event_utils.js";
 
 /**
@@ -31,7 +27,6 @@ import { waitOnEventOrTimeout } from "./event_utils.js";
 /**
  * @typedef {Object} PDFAttachmentViewerRenderParameters
  * @property {Object|null} attachments - A lookup table of attachment objects.
- * @property {boolean} [keepRenderedCapability]
  */
 
 class PDFAttachmentViewer extends BaseTreeViewer {
@@ -55,13 +50,13 @@ class PDFAttachmentViewer extends BaseTreeViewer {
     if (!keepRenderedCapability) {
       // The only situation in which the `_renderedCapability` should *not* be
       // replaced is when appending FileAttachment annotations.
-      this._renderedCapability = Promise.withResolvers();
+      this._renderedCapability = new PromiseCapability();
     }
     this._pendingDispatchEvent = false;
   }
 
   /**
-   * @protected
+   * @private
    */
   async _dispatchEvent(attachmentsCount) {
     this._renderedCapability.resolve();
@@ -92,11 +87,11 @@ class PDFAttachmentViewer extends BaseTreeViewer {
   }
 
   /**
-   * @protected
+   * @private
    */
   _bindLink(element, { content, filename }) {
     element.onclick = () => {
-      this.downloadManager.openOrDownloadData(content, filename);
+      this.downloadManager.openOrDownloadData(element, content, filename);
       return false;
     };
   }

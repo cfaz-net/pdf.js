@@ -353,8 +353,11 @@ function bidi(str, startLevel = -1, vertical = false) {
       } else if (t === "AN" || t === "EN") {
         levels[i] += 2;
       }
-    } else if (/* isOdd && */ t === "L" || t === "AN" || t === "EN") {
-      levels[i] += 1;
+    } else {
+      // isOdd
+      if (t === "L" || t === "AN" || t === "EN") {
+        levels[i] += 1;
+      }
     }
   }
 

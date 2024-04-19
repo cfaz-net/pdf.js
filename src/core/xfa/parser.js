@@ -24,7 +24,7 @@ import {
   $onChild,
   $onText,
   $setId,
-} from "./symbol_utils.js";
+} from "./xfa_object.js";
 import { XMLParserBase, XMLParserErrorCode } from "../xml_parser.js";
 import { Builder } from "./builder.js";
 import { warn } from "../../shared/util.js";

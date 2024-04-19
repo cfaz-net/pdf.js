@@ -19,6 +19,7 @@
 
 import { binarySearchFirstItem, scrollIntoView } from "./ui_utils.js";
 import { getCharacterType, getNormalizeWithNFKC } from "./pdf_find_utils.js";
+import { PromiseCapability } from "pdfjs-lib";
 
 const FindState = {
   FOUND: 0,
@@ -447,6 +448,18 @@ class PDFFindController {
     if (!state) {
       return;
     }
+    if (
+      (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
+      state.phraseSearch === false
+    ) {
+      console.error(
+        "The `phraseSearch`-parameter was removed, please provide " +
+          "an Array of strings in the `query`-parameter instead."
+      );
+      if (typeof state.query === "string") {
+        state.query = state.query.match(/\S+/g);
+      }
+    }
     const pdfDocument = this._pdfDocument;
     const { type } = state;
 
@@ -575,7 +588,7 @@ class PDFFindController {
     clearTimeout(this._findTimeout);
     this._findTimeout = null;
 
-    this._firstPageCapability = Promise.withResolvers();
+    this._firstPageCapability = new PromiseCapability();
   }
 
   /**
@@ -610,10 +623,11 @@ class PDFFindController {
       if (newQuery !== prevQuery) {
         return true;
       }
-    } else if (
-      /* isArray && */ JSON.stringify(newQuery) !== JSON.stringify(prevQuery)
-    ) {
-      return true;
+    } else {
+      // Array
+      if (JSON.stringify(newQuery) !== JSON.stringify(prevQuery)) {
+        return true;
+      }
     }
 
     switch (state.type) {
@@ -835,17 +849,18 @@ class PDFFindController {
       return;
     }
 
-    let deferred = Promise.resolve();
+    let promise = Promise.resolve();
     const textOptions = { disableNormalization: true };
     for (let i = 0, ii = this._linkService.pagesCount; i < ii; i++) {
-      const { promise, resolve } = Promise.withResolvers();
-      this._extractTextPromises[i] = promise;
+      const extractTextCapability = new PromiseCapability();
+      this._extractTextPromises[i] = extractTextCapability.promise;
 
-      // eslint-disable-next-line arrow-body-style
-      deferred = deferred.then(() => {
+      promise = promise.then(() => {
         return this._pdfDocument
           .getPage(i + 1)
-          .then(pdfPage => pdfPage.getTextContent(textOptions))
+          .then(pdfPage => {
+            return pdfPage.getTextContent(textOptions);
+          })
           .then(
             textContent => {
               const strBuf = [];
@@ -863,7 +878,7 @@ class PDFFindController {
                 this._pageDiffs[i],
                 this._hasDiacritics[i],
               ] = normalize(strBuf.join(""));
-              resolve();
+              extractTextCapability.resolve();
             },
             reason => {
               console.error(
@@ -874,7 +889,7 @@ class PDFFindController {
               this._pageContents[i] = "";
               this._pageDiffs[i] = null;
               this._hasDiacritics[i] = false;
-              resolve();
+              extractTextCapability.resolve();
             }
           );
       });

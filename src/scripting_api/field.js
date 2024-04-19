@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { createActionsMap, FieldType, getFieldType } from "./common.js";
+import { createActionsMap, getFieldType } from "./common.js";
 import { Color } from "./color.js";
 import { PDFObject } from "./pdf_object.js";
 
@@ -127,10 +127,12 @@ class Field extends PDFObject {
       indices.forEach(i => {
         this._value.push(this._items[i].displayValue);
       });
-    } else if (indices.length > 0) {
-      indices = indices.splice(1, indices.length - 1);
-      this._currentValueIndices = indices[0];
-      this._value = this._items[this._currentValueIndices];
+    } else {
+      if (indices.length > 0) {
+        indices = indices.splice(1, indices.length - 1);
+        this._currentValueIndices = indices[0];
+        this._value = this._items[this._currentValueIndices];
+      }
     }
     this._send({ id: this._id, indices });
   }
@@ -245,12 +247,7 @@ class Field extends PDFObject {
       return;
     }
 
-    if (
-      value === "" ||
-      typeof value !== "string" ||
-      // When the field type is date or time, the value must be a string.
-      this._fieldType >= FieldType.date
-    ) {
+    if (value === "" || typeof value !== "string") {
       this._originalValue = undefined;
       this._value = value;
       return;
@@ -392,10 +389,12 @@ class Field extends PDFObject {
           --this._currentValueIndices[index];
         }
       }
-    } else if (this._currentValueIndices === nIdx) {
-      this._currentValueIndices = this.numItems > 0 ? 0 : -1;
-    } else if (this._currentValueIndices > nIdx) {
-      --this._currentValueIndices;
+    } else {
+      if (this._currentValueIndices === nIdx) {
+        this._currentValueIndices = this.numItems > 0 ? 0 : -1;
+      } else if (this._currentValueIndices > nIdx) {
+        --this._currentValueIndices;
+      }
     }
 
     this._send({ id: this._id, remove: nIdx });

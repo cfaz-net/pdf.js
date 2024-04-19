@@ -42,9 +42,7 @@ function pickPlatformItem(dict) {
  * collections attributes and related files (/RF)
  */
 class FileSpec {
-  #contentAvailable = false;
-
-  constructor(root, xref, skipContent = false) {
+  constructor(root, xref) {
     if (!(root instanceof Dict)) {
       return;
     }
@@ -59,12 +57,10 @@ class FileSpec {
     if (root.has("RF")) {
       warn("Related file specifications are not supported");
     }
-    if (!skipContent) {
-      if (root.has("EF")) {
-        this.#contentAvailable = true;
-      } else {
-        warn("Non-embedded file specifications are not supported");
-      }
+    this.contentAvailable = true;
+    if (!root.has("EF")) {
+      this.contentAvailable = false;
+      warn("Non-embedded file specifications are not supported");
     }
   }
 
@@ -80,7 +76,7 @@ class FileSpec {
   }
 
   get content() {
-    if (!this.#contentAvailable) {
+    if (!this.contentAvailable) {
       return null;
     }
     if (!this.contentRef && this.root) {

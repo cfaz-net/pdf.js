@@ -195,7 +195,7 @@ function watchScroll(viewAreaElement, callback) {
 
 /**
  * Helper function to parse query string (e.g. ?param1=value&param2=...).
- * @param {string} query
+ * @param {string}
  * @returns {Map}
  */
 function parseQueryString(query) {
@@ -206,18 +206,19 @@ function parseQueryString(query) {
   return params;
 }
 
-const InvisibleCharsRegExp = /[\x00-\x1F]/g;
+const InvisibleCharactersRegExp = /[\x01-\x1F]/g;
 
 /**
  * @param {string} str
  * @param {boolean} [replaceInvisible]
  */
 function removeNullCharacters(str, replaceInvisible = false) {
-  if (!InvisibleCharsRegExp.test(str)) {
+  if (typeof str !== "string") {
+    console.error(`The argument must be a string.`);
     return str;
   }
   if (replaceInvisible) {
-    return str.replaceAll(InvisibleCharsRegExp, m => (m === "\x00" ? "" : " "));
+    str = str.replaceAll(InvisibleCharactersRegExp, " ");
   }
   return str.replaceAll("\x00", "");
 }
@@ -460,7 +461,7 @@ function backtrackBeforeAllVisibleElements(index, views, top) {
  * rendering canvas. Earlier and later refer to index in `views`, not page
  * layout.)
  *
- * @param {GetVisibleElementsParameters} params
+ * @param {GetVisibleElementsParameters}
  * @returns {Object} `{ first, last, views: [{ id, x, y, view, percent }] }`
  */
 function getVisibleElements({
@@ -601,6 +602,13 @@ function getVisibleElements({
     });
   }
   return { first, last, views: visible, ids };
+}
+
+/**
+ * Event handler to suppress context menu.
+ */
+function noContextMenuHandler(evt) {
+  evt.preventDefault();
 }
 
 function normalizeWheelEventDirection(evt) {
@@ -783,7 +791,7 @@ function getActiveOrFocusedElement() {
 
 /**
  * Converts API PageLayout values to the format used by `BaseViewer`.
- * @param {string} layout - The API PageLayout value.
+ * @param {string} mode - The API PageLayout value.
  * @returns {Object}
  */
 function apiPageLayoutToViewerModes(layout) {
@@ -873,6 +881,7 @@ export {
   MAX_AUTO_SCALE,
   MAX_SCALE,
   MIN_SCALE,
+  noContextMenuHandler,
   normalizeWheelEventDelta,
   normalizeWheelEventDirection,
   OutputScale,
