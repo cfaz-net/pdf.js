@@ -92,7 +92,7 @@
   --toolbarButton-presentationMode-icon: url(pdf_viewer/web/images/toolbarButton-presentationMode.svg);
   --toolbarButton-print-icon: url(pdf_viewer/web/images/toolbarButton-print.svg);
   /*#if GENERIC*/
-  --toolbarButton-openFile-icon: url(pdf_viewer/web/images/toolbarButton-openFile.svg);
+  --toolbarButton-openFile-icon: url(images/toolbarButton-openFile.svg);
   /*#endif*/
   --toolbarButton-download-icon: url(pdf_viewer/web/images/toolbarButton-download.svg);
   --toolbarButton-bookmark-icon: url(pdf_viewer/web/images/toolbarButton-bookmark.svg);
