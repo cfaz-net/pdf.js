@@ -14,9 +14,10 @@
  */
 /* globals chrome */
 
+import { DefaultExternalServices, PDFViewerApplication } from "./app.js";
 import { AppOptions } from "./app_options.js";
-import { BaseExternalServices } from "./external_services.js";
 import { BasePreferences } from "./preferences.js";
+import { DownloadManager } from "./download_manager.js";
 import { GenericL10n } from "./genericl10n.js";
 import { GenericScripting } from "./generic_scripting.js";
 
@@ -42,15 +43,6 @@ if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("CHROME")) {
 
   AppOptions.set("defaultUrl", defaultUrl);
 })();
-
-let viewerApp = { initialized: false };
-function initCom(app) {
-  viewerApp = app;
-
-  // Ensure that PDFViewerApplication.initialBookmark reflects the current hash,
-  // in case the URL rewrite above results in a different hash.
-  viewerApp.initialBookmark = location.hash.slice(1);
-}
 
 const ChromeCom = {
   /**
@@ -82,9 +74,10 @@ const ChromeCom = {
    * Resolves a PDF file path and attempts to detects length.
    *
    * @param {string} file - Absolute URL of PDF file.
+   * @param {OverlayManager} overlayManager - Manager for the viewer overlays.
    * @param {Function} callback - A callback with resolved URL and file length.
    */
-  resolvePDFFile(file, callback) {
+  resolvePDFFile(file, overlayManager, callback) {
     // Expand drive:-URLs to filesystem URLs (Chrome OS)
     file = file.replace(
       /^drive:/i,
@@ -108,18 +101,21 @@ const ChromeCom = {
         // Even without this check, the file load in frames is still blocked,
         // but this may change in the future (https://crbug.com/550151).
         if (origin && !/^file:|^chrome-extension:/.test(origin)) {
-          viewerApp._documentError(null, {
-            message:
-              `Blocked ${origin} from loading ${file}. Refused to load ` +
-              "a local file in a non-local page for security reasons.",
-          });
+          PDFViewerApplication._documentError(
+            "Blocked " +
+              origin +
+              " from loading " +
+              file +
+              ". Refused to load a local file in a non-local page " +
+              "for security reasons."
+          );
           return;
         }
         isAllowedFileSchemeAccess(function (isAllowedAccess) {
           if (isAllowedAccess) {
             callback(file);
           } else {
-            requestAccessToLocalFile(file, viewerApp.overlayManager, callback);
+            requestAccessToLocalFile(file, overlayManager, callback);
           }
         });
       });
@@ -154,7 +150,7 @@ function isRuntimeAvailable() {
     if (chrome.runtime?.getManifest()) {
       return true;
     }
-  } catch {}
+  } catch (e) {}
   return false;
 }
 
@@ -327,7 +323,7 @@ function setReferer(url, callback) {
 // chrome.storage.local to chrome.storage.sync when needed.
 const storageArea = chrome.storage.sync || chrome.storage.local;
 
-class Preferences extends BasePreferences {
+class ChromePreferences extends BasePreferences {
   async _writeToStorage(prefObj) {
     return new Promise(resolve => {
       if (prefObj === this.defaults) {
@@ -353,7 +349,7 @@ class Preferences extends BasePreferences {
           defaultPrefs = this.defaults;
         }
         storageArea.get(defaultPrefs, function (readPrefs) {
-          resolve({ prefs: readPrefs });
+          resolve(readPrefs);
         });
       };
 
@@ -416,29 +412,34 @@ class Preferences extends BasePreferences {
   }
 }
 
-class ExternalServices extends BaseExternalServices {
-  initPassiveLoading() {
+class ChromeExternalServices extends DefaultExternalServices {
+  static initPassiveLoading(callbacks) {
+    // defaultUrl is set in viewer.js
     ChromeCom.resolvePDFFile(
       AppOptions.get("defaultUrl"),
+      PDFViewerApplication.overlayManager,
       function (url, length, originalUrl) {
-        viewerApp.open({ url, length, originalUrl });
+        callbacks.onOpenWithURL(url, length, originalUrl);
       }
     );
   }
 
-  async createL10n() {
+  static createDownloadManager() {
+    return new DownloadManager();
+  }
+
+  static createPreferences() {
+    return new ChromePreferences();
+  }
+
+  static createL10n(options) {
     return new GenericL10n(navigator.language);
   }
 
-  createScripting() {
-    return new GenericScripting(AppOptions.get("sandboxBundleSrc"));
+  static createScripting({ sandboxBundleSrc }) {
+    return new GenericScripting(sandboxBundleSrc);
   }
 }
+PDFViewerApplication.externalServices = ChromeExternalServices;
 
-class MLManager {
-  async guess() {
-    return null;
-  }
-}
-
-export { ExternalServices, initCom, MLManager, Preferences };
+export { ChromeCom };

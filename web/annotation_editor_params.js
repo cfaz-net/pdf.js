@@ -13,21 +13,7 @@
  * limitations under the License.
  */
 
-/** @typedef {import("./event_utils.js").EventBus} EventBus */
-
 import { AnnotationEditorParamsType } from "pdfjs-lib";
-
-/**
- * @typedef {Object} AnnotationEditorParamsOptions
- * @property {HTMLInputElement} editorFreeTextFontSize
- * @property {HTMLInputElement} editorFreeTextColor
- * @property {HTMLInputElement} editorInkColor
- * @property {HTMLInputElement} editorInkThickness
- * @property {HTMLInputElement} editorInkOpacity
- * @property {HTMLButtonElement} editorStampAddImage
- * @property {HTMLInputElement} editorFreeHighlightThickness
- * @property {HTMLButtonElement} editorHighlightShowAll
- */
 
 class AnnotationEditorParams {
   /**
@@ -39,18 +25,12 @@ class AnnotationEditorParams {
     this.#bindListeners(options);
   }
 
-  /**
-   * @param {AnnotationEditorParamsOptions} options
-   */
   #bindListeners({
     editorFreeTextFontSize,
     editorFreeTextColor,
     editorInkColor,
     editorInkThickness,
     editorInkOpacity,
-    editorStampAddImage,
-    editorFreeHighlightThickness,
-    editorHighlightShowAll,
   }) {
     const dispatchEvent = (typeStr, value) => {
       this.eventBus.dispatch("switchannotationeditorparams", {
@@ -74,17 +54,6 @@ class AnnotationEditorParams {
     editorInkOpacity.addEventListener("input", function () {
       dispatchEvent("INK_OPACITY", this.valueAsNumber);
     });
-    editorStampAddImage.addEventListener("click", () => {
-      dispatchEvent("CREATE");
-    });
-    editorFreeHighlightThickness.addEventListener("input", function () {
-      dispatchEvent("HIGHLIGHT_THICKNESS", this.valueAsNumber);
-    });
-    editorHighlightShowAll.addEventListener("click", function () {
-      const checked = this.getAttribute("aria-pressed") === "true";
-      this.setAttribute("aria-pressed", !checked);
-      dispatchEvent("HIGHLIGHT_SHOW_ALL", !checked);
-    });
 
     this.eventBus._on("annotationeditorparamschanged", evt => {
       for (const [type, value] of evt.details) {
@@ -103,15 +72,6 @@ class AnnotationEditorParams {
             break;
           case AnnotationEditorParamsType.INK_OPACITY:
             editorInkOpacity.value = value;
-            break;
-          case AnnotationEditorParamsType.HIGHLIGHT_THICKNESS:
-            editorFreeHighlightThickness.value = value;
-            break;
-          case AnnotationEditorParamsType.HIGHLIGHT_FREE:
-            editorFreeHighlightThickness.disabled = !value;
-            break;
-          case AnnotationEditorParamsType.HIGHLIGHT_SHOW_ALL:
-            editorHighlightShowAll.setAttribute("aria-pressed", value);
             break;
         }
       }

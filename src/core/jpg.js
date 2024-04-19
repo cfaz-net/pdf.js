@@ -385,10 +385,12 @@ function decodeScan(
 
   let mcu = 0,
     fileMarker;
-  const mcuExpected =
-    componentsLength === 1
-      ? components[0].blocksPerLine * components[0].blocksPerColumn
-      : mcusPerLine * frame.mcusPerColumn;
+  let mcuExpected;
+  if (componentsLength === 1) {
+    mcuExpected = components[0].blocksPerLine * components[0].blocksPerColumn;
+  } else {
+    mcuExpected = mcusPerLine * frame.mcusPerColumn;
+  }
 
   let h, v;
   while (mcu <= mcuExpected) {
@@ -1073,9 +1075,6 @@ class JpegImage {
       offset += 2;
     }
 
-    if (!frame) {
-      throw new JpegError("JpegImage.parse - no frame data found.");
-    }
     this.width = frame.samplesPerLine;
     this.height = frame.scanLines;
     this.jfif = jfif;

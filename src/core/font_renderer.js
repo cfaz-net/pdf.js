@@ -211,12 +211,14 @@ function compileGlyf(code, cmds, font) {
           arg2 = getUint16(code, i + 2);
         }
         i += 4;
-      } else if (flags & 0x02) {
-        arg1 = getInt8(code, i++);
-        arg2 = getInt8(code, i++);
       } else {
-        arg1 = code[i++];
-        arg2 = code[i++];
+        if (flags & 0x02) {
+          arg1 = getInt8(code, i++);
+          arg2 = getInt8(code, i++);
+        } else {
+          arg1 = code[i++];
+          arg2 = code[i++];
+        }
       }
       if (flags & 0x02) {
         x = arg1;

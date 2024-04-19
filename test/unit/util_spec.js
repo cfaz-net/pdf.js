@@ -17,6 +17,8 @@ import {
   bytesToString,
   createValidAbsoluteUrl,
   getModificationDate,
+  isArrayBuffer,
+  PromiseCapability,
   string32,
   stringToBytes,
   stringToPDFString,
@@ -48,6 +50,20 @@ describe("util", function () {
       const string = "a".repeat(length);
 
       expect(bytesToString(bytes)).toEqual(string);
+    });
+  });
+
+  describe("isArrayBuffer", function () {
+    it("handles array buffer values", function () {
+      expect(isArrayBuffer(new ArrayBuffer(0))).toEqual(true);
+      expect(isArrayBuffer(new Uint8Array(0))).toEqual(true);
+    });
+
+    it("handles non-array buffer values", function () {
+      expect(isArrayBuffer("true")).toEqual(false);
+      expect(isArrayBuffer(1)).toEqual(false);
+      expect(isArrayBuffer(null)).toEqual(false);
+      expect(isArrayBuffer(undefined)).toEqual(false);
     });
   });
 
@@ -83,19 +99,9 @@ describe("util", function () {
       expect(stringToPDFString(str)).toEqual("string");
     });
 
-    it("handles incomplete UTF-16 big-endian strings", function () {
-      const str = "\xFE\xFF\x00\x73\x00\x74\x00\x72\x00\x69\x00\x6E\x00";
-      expect(stringToPDFString(str)).toEqual("strin");
-    });
-
     it("handles UTF-16 little-endian strings", function () {
       const str = "\xFF\xFE\x73\x00\x74\x00\x72\x00\x69\x00\x6E\x00\x67\x00";
       expect(stringToPDFString(str)).toEqual("string");
-    });
-
-    it("handles incomplete UTF-16 little-endian strings", function () {
-      const str = "\xFF\xFE\x73\x00\x74\x00\x72\x00\x69\x00\x6E\x00\x67";
-      expect(stringToPDFString(str)).toEqual("strin");
     });
 
     it("handles UTF-8 strings", function () {
@@ -127,22 +133,6 @@ describe("util", function () {
       // UTF-8
       const str4 = "\xEF\xBB\xBF";
       expect(stringToPDFString(str4)).toEqual("");
-    });
-
-    it("handles strings with language code", function () {
-      // ISO Latin 1
-      const str1 = "hello \x1benUS\x1bworld";
-      expect(stringToPDFString(str1)).toEqual("hello world");
-
-      // UTF-16BE
-      const str2 =
-        "\xFE\xFF\x00h\x00e\x00l\x00l\x00o\x00 \x00\x1b\x00e\x00n\x00U\x00S\x00\x1b\x00w\x00o\x00r\x00l\x00d";
-      expect(stringToPDFString(str2)).toEqual("hello world");
-
-      // UTF-16LE
-      const str3 =
-        "\xFF\xFEh\x00e\x00l\x00l\x00o\x00 \x00\x1b\x00e\x00n\x00U\x00S\x00\x1b\x00w\x00o\x00r\x00l\x00d\x00";
-      expect(stringToPDFString(str3)).toEqual("hello world");
     });
   });
 
@@ -219,6 +209,37 @@ describe("util", function () {
         new URL("tel:+0123456789")
       );
       expect(createValidAbsoluteUrl("/foo", "tel:0123456789")).toEqual(null);
+    });
+  });
+
+  describe("PromiseCapability", function () {
+    it("should resolve with correct data", async function () {
+      const promiseCapability = new PromiseCapability();
+      expect(promiseCapability.settled).toEqual(false);
+
+      promiseCapability.resolve({ test: "abc" });
+
+      const data = await promiseCapability.promise;
+      expect(promiseCapability.settled).toEqual(true);
+      expect(data).toEqual({ test: "abc" });
+    });
+
+    it("should reject with correct reason", async function () {
+      const promiseCapability = new PromiseCapability();
+      expect(promiseCapability.settled).toEqual(false);
+
+      promiseCapability.reject(new Error("reason"));
+
+      try {
+        await promiseCapability.promise;
+
+        // Shouldn't get here.
+        expect(false).toEqual(true);
+      } catch (reason) {
+        expect(promiseCapability.settled).toEqual(true);
+        expect(reason instanceof Error).toEqual(true);
+        expect(reason.message).toEqual("reason");
+      }
     });
   });
 

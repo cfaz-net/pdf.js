@@ -247,7 +247,11 @@ class PDFFunction {
     }
 
     let decode = toNumberArray(dict.getArray("Decode"));
-    decode = !decode ? range : toMultiArray(decode);
+    if (!decode) {
+      decode = range;
+    } else {
+      decode = toMultiArray(decode);
+    }
 
     const samples = this.getSampleArray(size, outputSize, bps, fn);
     // const mask = 2 ** bps - 1;
@@ -714,7 +718,7 @@ class PostScriptEvaluator {
           break;
         case "log":
           a = stack.pop();
-          stack.push(Math.log10(a));
+          stack.push(Math.log(a) / Math.LN10);
           break;
         case "lt":
           b = stack.pop();

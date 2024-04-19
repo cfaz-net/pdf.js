@@ -74,7 +74,7 @@ function extractFilenameFromHeader(getResponseHeader) {
     if (filename.includes("%")) {
       try {
         filename = decodeURIComponent(filename);
-      } catch {}
+      } catch (ex) {}
     }
     if (isPdfFile(filename)) {
       return filename;

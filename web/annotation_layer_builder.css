@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-.annotationLayer {
+:root {
   --annotation-unfocused-field-background: url("data:image/svg+xml;charset=UTF-8,<svg width='1px' height='1px' xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' style='fill:rgba(0, 54, 255, 0.13);'/></svg>");
   --input-focus-border-color: Highlight;
   --input-focus-outline: 1px solid Canvas;
@@ -21,56 +21,30 @@
   --input-disabled-border-color: transparent;
   --input-hover-border-color: black;
   --link-outline: none;
+}
 
-  @media screen and (forced-colors: active) {
+@media screen and (forced-colors: active) {
+  :root {
     --input-focus-border-color: CanvasText;
     --input-unfocused-border-color: ActiveText;
     --input-disabled-border-color: GrayText;
     --input-hover-border-color: Highlight;
     --link-outline: 1.5px solid LinkText;
-
-    .textWidgetAnnotation :is(input, textarea):required,
-    .choiceWidgetAnnotation select:required,
-    .buttonWidgetAnnotation:is(.checkBox, .radioButton) input:required {
-      outline: 1.5px solid selectedItem;
-    }
-
-    .linkAnnotation {
-      outline: var(--link-outline);
-
-      &:hover {
-        backdrop-filter: var(--hcm-highlight-filter);
-      }
-
-      & > a:hover {
-        opacity: 0 !important;
-        background: none !important;
-        box-shadow: none;
-      }
-    }
-
-    .popupAnnotation .popup {
-      outline: calc(1.5px * var(--scale-factor)) solid CanvasText !important;
-      background-color: ButtonFace !important;
-      color: ButtonText !important;
-    }
-
-    .highlightArea:hover::after {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      backdrop-filter: var(--hcm-highlight-filter);
-      content: "";
-      pointer-events: none;
-    }
-
-    .popupAnnotation.focused .popup {
-      outline: calc(3px * var(--scale-factor)) solid Highlight !important;
-    }
+  }
+  .annotationLayer .textWidgetAnnotation :is(input, textarea):required,
+  .annotationLayer .choiceWidgetAnnotation select:required,
+  .annotationLayer
+    .buttonWidgetAnnotation:is(.checkBox, .radioButton)
+    input:required {
+    outline: 1.5px solid selectedItem;
   }
 
+  .annotationLayer .linkAnnotation:hover {
+    backdrop-filter: invert(100%);
+  }
+}
+
+.annotationLayer {
   position: absolute;
   top: 0;
   left: 0;

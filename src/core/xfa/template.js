@@ -58,7 +58,13 @@ import {
   $toPages,
   $toStyle,
   $uid,
-} from "./symbol_utils.js";
+  ContentObject,
+  Option01,
+  OptionObject,
+  StringObject,
+  XFAObject,
+  XFAObjectArray,
+} from "./xfa_object.js";
 import { $buildXFAObject, NamespaceIds } from "./namespaces.js";
 import {
   addHTML,
@@ -82,14 +88,6 @@ import {
   setPara,
   toStyle,
 } from "./html_utils.js";
-import {
-  ContentObject,
-  Option01,
-  OptionObject,
-  StringObject,
-  XFAObject,
-  XFAObjectArray,
-} from "./xfa_object.js";
 import {
   getBBox,
   getColor,
@@ -271,7 +269,11 @@ function applyAssist(obj, attributes) {
   } else {
     const parent = obj[$getParent]();
     if (parent.layout === "row") {
-      attributes.role = parent.assist?.role === "TH" ? "columnheader" : "cell";
+      if (parent.assist?.role === "TH") {
+        attributes.role = "columnheader";
+      } else {
+        attributes.role = "cell";
+      }
     }
   }
 }
@@ -3658,10 +3660,12 @@ class Line extends XFAObject {
     } else if (parent.h <= thickness) {
       [x1, y1, x2, y2] = [0, "50%", "100%", "50%"];
       height = style.strokeWidth;
-    } else if (this.slope === "\\") {
-      [x1, y1, x2, y2] = [0, 0, "100%", "100%"];
     } else {
-      [x1, y1, x2, y2] = [0, "100%", "100%", 0];
+      if (this.slope === "\\") {
+        [x1, y1, x2, y2] = [0, 0, "100%", "100%"];
+      } else {
+        [x1, y1, x2, y2] = [0, "100%", "100%", 0];
+      }
     }
 
     const line = {
