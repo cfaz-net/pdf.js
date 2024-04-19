@@ -1056,34 +1056,24 @@ const PDFViewerApplication = {
   /**
    * @private
    */
-  async _sendFileToStorage(url, file) {
+  async _sendFileToStorage(directUpload) {
     return new Promise((resolve, reject) => {
-      let xhr = new XMLHttpRequest();
-      xhr.open('PUT', url, true);
-  
-      xhr.onload = function () {
-        if (xhr.status === 200) {
-          resolve();
-        } else {
-          reject(new Error("Não foi possível fazer o upload do arquivo."));
-        }
-      };
-  
-      xhr.onerror = function (e) {
-        reject(e);
-      };
-  
-      xhr.setRequestHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      xhr.setRequestHeader('Content-Type', file.type);
-      xhr.send(file);
-    });
+			directUpload.create((error, blob) => {
+				if (error) {
+					reject(new Error(`Não foi possível atualizar o arquivo. ${error}`));
+				} else {
+					resolve(blob)
+				}
+			})
+		})
   },
 
   /**
    * @private
    */
-  async _updateArchiveCfaz(archive_id) {
+  async _updateArchiveCfaz(archive_id, document_signed_id) {
     return new Promise((resolve, reject) => {
+      const params = JSON.stringify({ archive: {document: document_signed_id} })
       let xhr = new XMLHttpRequest();
       xhr.open('PUT', `/archives/${archive_id}.json`, true);
 
@@ -1092,7 +1082,7 @@ const PDFViewerApplication = {
       if(csrfToken){
         xhr.setRequestHeader('X-CSRF-Token', csrfToken);
       }
-  
+
       xhr.onload = function () {
         if (xhr.status === 200) {
           resolve();
@@ -1100,12 +1090,12 @@ const PDFViewerApplication = {
           reject(new Error("Não foi possível atualizar o arquivo."));
         }
       };
-  
       xhr.onerror = function (e) {
         reject(e);
       };
 
-      xhr.send();
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(params);
     });
   },
 
@@ -1116,7 +1106,8 @@ const PDFViewerApplication = {
     this._saveInProgress = true;
     await this.pdfScriptingManager.dispatchWillSave();
 
-    const archivePutUrl = document.getElementById('archive_put_url')?.value,
+    const ac_url = document.getElementById('active_storage_url')?.value,
+          archive_name = document.getElementById('archive_name')?.value,
           archiveId = document.getElementById('archive_id')?.value;
 
     this.pdfSaveCfazDialog?.open();
@@ -1125,10 +1116,12 @@ const PDFViewerApplication = {
 
       const data = await this.pdfDocument.saveDocument();
       const blob = new Blob([data], { type: "application/pdf" });
-
-      if(archivePutUrl && archiveId){
-        await this._sendFileToStorage(archivePutUrl, blob);
-        await this._updateArchiveCfaz(archiveId);
+      const doc_file = new File([blob], archive_name, { type: "application/pdf" })
+      if(ac_url && archiveId){
+        const directUpload = new ActiveStorage.DirectUpload(doc_file, ac_url)
+        await this._sendFileToStorage(directUpload).then((document)=>{
+          this._updateArchiveCfaz(archiveId, document.signed_id);
+        });
       }
 
       this.pdfSaveCfazDialog?.setMessageContent('Arquivo enviado com sucesso.');
