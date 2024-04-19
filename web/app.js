@@ -3350,23 +3350,6 @@ function webViewerAnnotationEditorStatesChanged(data) {
 function webViewerSaveCfaz() {
   PDFViewerApplication.saveCfaz();
 }
-function webViewerCustomButton() {
-  PDFViewerApplication.customButton();
-}
-
-/* Abstract factory for the print service. */
-const PDFPrintServiceFactory = {
-  instance: {
-    supportsPrinting: false,
-    createPrintService() {
-      throw new Error("Not implemented: createPrintService");
-    },
-  },
-};
-
-function webViewerSaveCfaz() {
-  PDFViewerApplication.saveCfaz();
-}
 
 function webViewerBackButton() {
   PDFViewerApplication.backButton();
